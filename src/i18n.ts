@@ -18,4 +18,9 @@ i18n
     },
   });
 
+// Automatically switch text direction based on language
+i18n.on('languageChanged', (lng) => {
+  document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+});
+
 export default i18n;

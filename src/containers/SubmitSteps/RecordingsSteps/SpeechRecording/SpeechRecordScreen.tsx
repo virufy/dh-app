@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 // Assets
 import keepDistance from "../../../../assets/images/keepDistance.png";
@@ -9,8 +10,8 @@ import StartIcon from "../../../../assets/icons/start.svg";
 import StopIcon from "../../../../assets/icons/stop.svg";
 import UploadIcon from "../../../../assets/icons/upload.svg";
 
-
 const SpeechRecordScreen: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -20,7 +21,7 @@ const SpeechRecordScreen: React.FC = () => {
         navigate("/upload-complete", {
             state: {
                 audioFileUrl: "",
-                filename: "Speech Recording",
+                filename: t('recordSpeech.defaultFilename'),
                 nextPage: "/record-breath",
             },
         });
@@ -54,9 +55,9 @@ const SpeechRecordScreen: React.FC = () => {
                 backgroundColor: "transparent",
             }}
         >
-            <div style={{maxWidth: "1000px", width: "100%", position: "relative"}}>
+            <div style={{ maxWidth: "1000px", width: "100%", position: "relative" }}>
                 {/* Header */}
-                <div style={{position: "relative", marginTop: "1.25rem", marginBottom: "1.75rem"}}>
+                <div style={{ position: "relative", marginTop: "1.25rem", marginBottom: "1.75rem" }}>
                     <button
                         onClick={handleBack}
                         style={{
@@ -67,9 +68,9 @@ const SpeechRecordScreen: React.FC = () => {
                             border: "none",
                             cursor: "pointer",
                         }}
-                        aria-label="Go back"
+                        aria-label={t('recordSpeech.goBackAria')}
                     >
-                        <img src={BackIcon} alt="Back" width={24} height={24}/>
+                        <img src={BackIcon} alt={t('recordSpeech.goBackAlt')} width={24} height={24} />
                     </button>
                     <div
                         style={{
@@ -78,17 +79,18 @@ const SpeechRecordScreen: React.FC = () => {
                             fontSize: "18px",
                             color: "#3578de",
                             fontFamily: 'Source Sans Pro, sans-serif',
-
                         }}
                     >
-                        Record your speech
+                        {t('recordSpeech.title')}
                     </div>
                 </div>
 
-                <h3 style={{textAlign: "center", fontWeight: "bold", marginBottom: "2rem", fontFamily:"Source Sans Pro, sans-serif", fontSize: '32px'}}>Instructions</h3>
+                <h3 style={{ textAlign: "center", fontWeight: "bold", marginBottom: "2rem", fontFamily: "Source Sans Pro, sans-serif", fontSize: '32px' }}>
+                    {t('recordSpeech.instructionsTitle')}
+                </h3>
 
                 {/* Step 1 */}
-                <div style={{display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "1rem"}}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "1rem" }}>
                     <div style={{
                         minWidth: "28px",
                         height: "28px",
@@ -101,15 +103,14 @@ const SpeechRecordScreen: React.FC = () => {
                         fontSize: "20px"
                     }}>1
                     </div>
-                    <div style={{flex: 1, fontSize: "20px"}}>
-                        Find a <strong>quiet place</strong> at least <strong>20 ft (6m)</strong> away from others. If
-                        you are feeling ill, please sit down.
+                    <div style={{ flex: 1, fontSize: "20px" }}>
+                        {t('recordSpeech.instruction1')}
                     </div>
                 </div>
-                <img src={keepDistance} alt="Keep distance" style={{width: "100%", marginBottom: "1.5rem"}}/>
+                <img src={keepDistance} alt={t('recordSpeech.keepDistanceAlt')} style={{ width: "100%", marginBottom: "1.5rem" }} />
 
                 {/* Step 2 */}
-                <div style={{display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "1rem"}}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "1rem" }}>
                     <div style={{
                         minWidth: "28px",
                         height: "28px",
@@ -122,14 +123,14 @@ const SpeechRecordScreen: React.FC = () => {
                         fontSize: "14px"
                     }}>2
                     </div>
-                    <div style={{flex: 1, fontSize: "20px"}}>
-                        Hold the bottom of your device <strong>1–2 ft (30–60 cm)</strong> away from your mouth.
+                    <div style={{ flex: 1, fontSize: "20px" }}>
+                        {t('recordSpeech.instruction2')}
                     </div>
                 </div>
-                <img src={mouthSpeechDistance} alt="Device distance" style={{width: "100%", marginBottom: "1.5rem"}}/>
+                <img src={mouthSpeechDistance} alt={t('recordSpeech.mouthDistanceAlt')} style={{ width: "100%", marginBottom: "1.5rem" }} />
 
                 {/* Step 3 */}
-                <div style={{display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "2rem"}}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "2rem" }}>
                     <div style={{
                         minWidth: "28px",
                         height: "28px",
@@ -142,14 +143,13 @@ const SpeechRecordScreen: React.FC = () => {
                         fontSize: "20px"
                     }}>3
                     </div>
-                    <div style={{flex: 1, fontSize: "20px"}}>
-                        Tap record. Hold an <strong>“aaaaah”</strong> sound for at least <strong>5 seconds</strong>.
-                        Then tap stop.
+                    <div style={{ flex: 1, fontSize: "20px" }}>
+                        {t('recordSpeech.instruction3')}
                     </div>
                 </div>
 
                 {/* Timer */}
-                <div style={{display: "flex", justifyContent: "center", marginBottom: "1.75rem", marginTop:"3.5rem"}}>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem", marginTop: "3.5rem" }}>
                     <div
                         style={{
                             border: "1px solid #3578de",
@@ -173,7 +173,7 @@ const SpeechRecordScreen: React.FC = () => {
                         marginBottom: "2.5rem",
                     }}
                 >
-                    <div style={{textAlign: "center"}}>
+                    <div style={{ textAlign: "center" }}>
                         <button
                             style={{
                                 width: "64px",
@@ -187,12 +187,12 @@ const SpeechRecordScreen: React.FC = () => {
                                 cursor: "pointer",
                             }}
                         >
-                            <img src={StartIcon} alt="Start Recording" width={28} height={28}/>
+                            <img src={StartIcon} alt={t('recordSpeech.recordButton')} width={28} height={28} />
                         </button>
-                        <div style={{fontSize: "18px", marginTop: "0.5rem", color: "#666"}}>Record</div>
+                        <div style={{ fontSize: "18px", marginTop: "0.5rem", color: "#666" }}>{t('recordSpeech.recordButton')}</div>
                     </div>
 
-                    <div style={{textAlign: "center"}}>
+                    <div style={{ textAlign: "center" }}>
                         <button
                             style={{
                                 width: "64px",
@@ -206,14 +206,14 @@ const SpeechRecordScreen: React.FC = () => {
                                 cursor: "pointer",
                             }}
                         >
-                            <img src={StopIcon} alt="Stop Recording" width={20} height={20}/>
+                            <img src={StopIcon} alt={t('recordSpeech.stopButton')} width={20} height={20} />
                         </button>
-                        <div style={{fontSize: "18px", marginTop: "0.5rem", color: "#666"}}>Stop</div>
+                        <div style={{ fontSize: "18px", marginTop: "0.5rem", color: "#666" }}>{t('recordSpeech.stopButton')}</div>
                     </div>
                 </div>
 
                 {/* Buttons */}
-                <div style={{display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1rem"}}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1rem" }}>
                     <button
                         onClick={handleContinue}
                         style={{
@@ -226,7 +226,7 @@ const SpeechRecordScreen: React.FC = () => {
                             cursor: "pointer",
                         }}
                     >
-                        Continue
+                        {t('recordSpeech.continueButton')}
                     </button>
                     <button
                         onClick={handleUploadClick}
@@ -241,11 +241,11 @@ const SpeechRecordScreen: React.FC = () => {
                             cursor: "pointer"
                         }}
                     >
-                        <img src={UploadIcon} alt="Upload Icon" width={22} height={22}
-                             style={{marginBottom: "0.3rem", marginRight: "0.5rem"}}/>
-                        <span style={{fontSize: "13px", fontWeight: 600, color: "#333"}}>
-        Upload your own file
-    </span>
+                        <img src={UploadIcon} alt={t('recordSpeech.uploadFile')} width={22} height={22}
+                             style={{ marginBottom: "0.3rem", marginRight: "0.5rem" }} />
+                        <span style={{ fontSize: "13px", fontWeight: 600, color: "#333" }}>
+                            {t('recordSpeech.uploadFile')}
+                        </span>
                     </button>
 
                     <input
@@ -253,12 +253,12 @@ const SpeechRecordScreen: React.FC = () => {
                         accept="audio/*"
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        style={{display: "none"}}
+                        style={{ display: "none" }}
                     />
                 </div>
 
                 {/* Footer */}
-                <div style={{textAlign: 'center'}}>
+                <div style={{ textAlign: 'center' }}>
                     <a
                         href="https://docs.google.com/forms/d/e/1FAIpQLScYsWESIcn1uyEzFQT464qLSYZuUduHzThgTRPJODTQcCwz5w/viewform"
                         target="_blank"
@@ -270,7 +270,7 @@ const SpeechRecordScreen: React.FC = () => {
                             textDecoration: 'underline'
                         }}
                     >
-                        Something wrong? Report an error
+                        {t('recordSpeech.reportIssue')}
                     </a>
                 </div>
             </div>

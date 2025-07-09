@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+
 import {
     PageWrapper,
     ContentWrapper,
@@ -26,7 +28,9 @@ const UploadCompleteCough: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const { audioFileUrl, filename = 'Filename.flac', nextPage } = location.state || {};
+    const { t } = useTranslation();
+
+    const { audioFileUrl, filename = t('uploadComplete.filename'), nextPage } = location.state || {};
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -57,7 +61,11 @@ const UploadCompleteCough: React.FC = () => {
     const handlePlayPause = () => {
         const audio = audioRef.current;
         if (!audio) return;
-        isPlaying ? audio.pause() : audio.play();
+        if (isPlaying) {
+            audio.pause();
+        } else {
+            audio.play();
+        }
         setIsPlaying(!isPlaying);
     };
 
@@ -79,14 +87,14 @@ const UploadCompleteCough: React.FC = () => {
                 <audio ref={audioRef} src={audioFileUrl || ''} preload="auto" />
 
                 <Header>
-                    <BackButton onClick={handleBack}>
-                        <img src={ArrowLeftIcon} alt="Back" width={24} height={24} />
+                    <BackButton onClick={handleBack} aria-label={t('uploadComplete.backAria')}>
+                        <img src={ArrowLeftIcon} alt={t('uploadComplete.backAlt')} width={24} height={24} />
                     </BackButton>
-                    <HeaderTitle>Confirm Recording</HeaderTitle>
+                    <HeaderTitle>{t('uploadComplete.title')}</HeaderTitle>
                 </Header>
 
-                <Title>Upload Complete</Title>
-                <Subtitle>Confirm audio recording</Subtitle>
+                <Title>{t('uploadComplete.subtitle')}</Title>
+                <Subtitle>{t('uploadComplete.description')}</Subtitle>
 
                 <FileRow>
                     <span>{filename}</span>
@@ -100,6 +108,7 @@ const UploadCompleteCough: React.FC = () => {
                     value={currentTime}
                     step="0.1"
                     onChange={handleSeek}
+                    aria-label={t('uploadComplete.sliderAria')}
                 />
 
                 <TimeRow>
@@ -107,10 +116,10 @@ const UploadCompleteCough: React.FC = () => {
                     <span>- {formatTime(duration)}</span>
                 </TimeRow>
 
-                <PlayButton onClick={handlePlayPause}>
+                <PlayButton onClick={handlePlayPause} aria-label={isPlaying ? t('uploadComplete.pause') : t('uploadComplete.play')}>
                     <img
                         src={isPlaying ? PauseIcon : PlayIcon}
-                        alt={isPlaying ? 'Pause' : 'Play'}
+                        alt={isPlaying ? t('uploadComplete.pause') : t('uploadComplete.play')}
                         width="35"
                         height="35"
                         style={isPlaying ? {} : { marginLeft: '0.3rem' }}
@@ -118,8 +127,8 @@ const UploadCompleteCough: React.FC = () => {
                 </PlayButton>
 
                 <div>
-                    <RetakeButton onClick={handleRetake}>Retake</RetakeButton>
-                    <SubmitButton onClick={handleSubmit}>Submit</SubmitButton>
+                    <RetakeButton onClick={handleRetake}>{t('uploadComplete.retake')}</RetakeButton>
+                    <SubmitButton onClick={handleSubmit}>{t('uploadComplete.submit')}</SubmitButton>
                 </div>
 
                 <Footer>
@@ -128,7 +137,7 @@ const UploadCompleteCough: React.FC = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        Something wrong? Report an error
+                        {t('uploadComplete.report')}
                     </ErrorLink>
                 </Footer>
             </ContentWrapper>
