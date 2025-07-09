@@ -1,7 +1,7 @@
 import React from 'react';
 import SehaDubaiLogo from '../../assets/images/SehaDubaiLogo.png';
 import { useNavigate } from 'react-router-dom';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import {
     Container,
     InnerWrapper,
@@ -13,12 +13,13 @@ import {
 
 const ConfirmationScreen: React.FC = () => {
     const navigate = useNavigate();
-
+    const { t } = useTranslation();
     return (
         <Container>
             <InnerWrapper>
                 <Logo src={SehaDubaiLogo} alt="Dubai Health Logo" />
-                <Title>{t('confirmation.titleLine1')}<br />{t('confirmation.titleLine2')}
+                <Title>
+                    {t('confirmation.titleLine1')}
                 </Title>
                 <ButtonStyled onClick={() => navigate('/')}>
                     {t('confirmation.button')}

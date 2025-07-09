@@ -1,25 +1,11 @@
 {
-  "home": {
-    "title": "دراسة تشخيصية بالذكاء الاصطناعي لـ COVID / Flu / RSV  باستخدام الهاتف الذكي",
-    "language_label": "اللغة",
-    "patient_id_label": "معرف المريض",
-    "patient_id_placeholder": "أدخل معرف المريض",
-    "hospital_label": "اسم المستشفى",
-    "hospital_options": {
-      "barsha": "مركز البرشاء الصحي",
-      "rashid": "مستشفى راشد",
-      "latifa": "مستشفى لطيفة"
-    },
-    "submit_button": "التالي"
-  },
   "confirmation": {
-    "titleLine1": "شكرًا جزيلًا على إرسال",
-    "titleLine2": "النموذج!",
-    "button":"العودة إلى القائمة الرئيسية",
+    "titleLine1": "!\u200Fشكرًا جزيلًا على إرسال النموذج",
+    "button": "العودة إلى القائمة الرئيسية",
     "report": "هل هناك خطأ؟ أبلغ عن مشكلة"
   }
-
 }
+
 
 
 

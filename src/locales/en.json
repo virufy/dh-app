@@ -1,21 +1,9 @@
 {
-  "home": {
-    "title": "Smartphone COVID/Flu/RSV\nAI Diagnostics Study",
-    "language_label": "Language",
-    "patient_id_label": "Patient ID",
-    "patient_id_placeholder": "Enter Patient ID",
-    "hospital_label": "Hospital Name",
-    "hospital_options": {
-      "barsha": "Al Barsha Health Centre",
-      "rashid": "Rashid Hospital",
-      "latifa": "Latifa Hospital"
-    },
-    "submit_button": "Next"
-  },
-  "confirmation": {
-    "titleLine1": "Thank you for",
-    "titleLine2": "submitting!",
-    "button": "Return to main menu",
-    "report": "Something wrong? Report an error"
-  }
+ "confirmation": {
+  "titleLine1": "Thank you for submitting!",
+  "button": "Return to main menu",
+  "report": "Something wrong? Report an error"
+ }
 }
+
+
