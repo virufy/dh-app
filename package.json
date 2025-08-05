@@ -2,7 +2,7 @@
   "name": "dhapp",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://virufy.org/dh-app",
+  
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
     "@testing-library/dom": "^10.4.0",
