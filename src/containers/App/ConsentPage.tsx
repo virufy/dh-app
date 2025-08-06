@@ -184,7 +184,8 @@ const ConsentScreen: React.FC = () => {
                                 href={
                                         i18n.language === 'ar'
                                             ? 'https://drive.google.com/file/d/1-HhFT0XEMkgKjfywYEhVAi1WHNDDSIY3/view'
-                                            : 'https://drive.google.com/file/d/1vXhM9nFp2TfGdLplxpc4hV9EIuYZBodW/view'
+                                            : 'https://drive.google.com/file/d/1VByWxqoz_DEUGjyZZRF9_glkPSjXgZx7/view'
+                                            
                                     }
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -198,7 +199,7 @@ const ConsentScreen: React.FC = () => {
                                     src={
                                         i18n.language === 'ar'
                                             ? 'https://drive.google.com/file/d/1-HhFT0XEMkgKjfywYEhVAi1WHNDDSIY3/preview'
-                                            : 'https://drive.google.com/file/d/1vXhM9nFp2TfGdLplxpc4hV9EIuYZBodW/preview'
+                                            : 'https://drive.google.com/file/d/1VByWxqoz_DEUGjyZZRF9_glkPSjXgZx7/preview'
                                     }
                                     width="100%"
                                     height="100%"
