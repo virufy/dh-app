@@ -183,8 +183,8 @@ const ConsentScreen: React.FC = () => {
                             <a
                                 href={
                                         i18n.language === 'ar'
-                                            ? 'https://drive.google.com/file/d/1vZB2j2JeWCkzVyRv657_aaYXgndcfzAJ/view'
-                                            : 'https://drive.google.com/file/d/1FUmtRxEVgQG2kvUK9uv4m3Vl4OF_rslq/view'
+                                            ? 'https://drive.google.com/file/d/1ZStVIFr7hixosQufTu_ljg2XyuNvmfd_/view'
+                                            : 'https://drive.google.com/file/d/1RZfqtWyiYkSChm0-5raCIbH4zaqL-cqs/view'
                                             
                                     }
                                 target="_blank"
@@ -198,8 +198,8 @@ const ConsentScreen: React.FC = () => {
                                 <iframe 
                                     src={
                                         i18n.language === 'ar'
-                                            ? 'https://drive.google.com/file/d/1vZB2j2JeWCkzVyRv657_aaYXgndcfzAJ/preview'
-                                            : 'https://drive.google.com/file/d/1FUmtRxEVgQG2kvUK9uv4m3Vl4OF_rslq/preview'
+                                            ? 'https://drive.google.com/file/d/1ZStVIFr7hixosQufTu_ljg2XyuNvmfd_/preview'
+                                            : 'https://drive.google.com/file/d/1RZfqtWyiYkSChm0-5raCIbH4zaqL-cqs/preview'
                                     }
                                     width="100%"
                                     height="100%"
@@ -217,7 +217,7 @@ const ConsentScreen: React.FC = () => {
                         <a
                             href={
                                     i18n.language === 'ar'
-                                        ? 'https://drive.google.com/file/d/1Lw_1bQsRbYbTgtocGiFXkQAixlWR-2cR/view'
+                                        ? 'https://drive.google.com/file/d/1pbwIuUJqIH8T5RyEQE-eh9bazlNVBM6-/view'
                                         : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/view'
                                 }
                             target="_blank"
@@ -230,7 +230,7 @@ const ConsentScreen: React.FC = () => {
                         <div style={{...iframeStyle, marginTop: '1rem'}}>
                             <iframe
                                 src = {i18n.language === 'ar'
-                                        ? 'https://drive.google.com/file/d/1Lw_1bQsRbYbTgtocGiFXkQAixlWR-2cR/preview'
+                                        ? 'https://drive.google.com/file/d/1pbwIuUJqIH8T5RyEQE-eh9bazlNVBM6-/preview'
                                         : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/preview'
                                 }
                                 width="100%"
