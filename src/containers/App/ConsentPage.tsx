@@ -183,8 +183,8 @@ const ConsentScreen: React.FC = () => {
                             <a
                                 href={
                                         i18n.language === 'ar'
-                                            ? 'https://drive.google.com/file/d/1zQ4H2m7JIxVGlITCYY7Z_K3-SyR5FJgb/view'
-                                            : 'https://drive.google.com/file/d/10GSFqcBQJogzYp3yQME1lRqLrD_fx89z/view'
+                                            ? 'https://drive.google.com/file/d/1vZB2j2JeWCkzVyRv657_aaYXgndcfzAJ/view'
+                                            : 'https://drive.google.com/file/d/1FUmtRxEVgQG2kvUK9uv4m3Vl4OF_rslq/view'
                                             
                                     }
                                 target="_blank"
@@ -198,8 +198,8 @@ const ConsentScreen: React.FC = () => {
                                 <iframe 
                                     src={
                                         i18n.language === 'ar'
-                                            ? 'https://drive.google.com/file/d/1zQ4H2m7JIxVGlITCYY7Z_K3-SyR5FJgb/preview'
-                                            : 'https://drive.google.com/file/d/10GSFqcBQJogzYp3yQME1lRqLrD_fx89z/preview'
+                                            ? 'https://drive.google.com/file/d/1vZB2j2JeWCkzVyRv657_aaYXgndcfzAJ/preview'
+                                            : 'https://drive.google.com/file/d/1FUmtRxEVgQG2kvUK9uv4m3Vl4OF_rslq/preview'
                                     }
                                     width="100%"
                                     height="100%"
