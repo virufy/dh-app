@@ -314,7 +314,7 @@ const ConsentScreen: React.FC = () => {
                     </div>
                     <div style={{textAlign: "center"}}>
                         <a
-                            href="https://docs.google.com/forms/d/e/1FAIpQLScYsWESIcn1uyEzFQT464qLSYZuUduHzThgTRPJODTQcCwz5w/viewform"
+                            href="https://docs.google.com/forms/d/e/1FAIpQLSdlBAA3drY6NydPkxKkMWTEZQhE9p5BSH5YSuaK18F_rObBFg/viewform"
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
