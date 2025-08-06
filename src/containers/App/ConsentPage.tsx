@@ -217,7 +217,7 @@ const ConsentScreen: React.FC = () => {
                         <a
                             href={
                                     i18n.language === 'ar'
-                                        ? 'https://drive.google.com/file/d/1pbwIuUJqIH8T5RyEQE-eh9bazlNVBM6-/view'
+                                        ? 'https://drive.google.com/file/d/1Lw_1bQsRbYbTgtocGiFXkQAixlWR-2cR/view'
                                         : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/view'
                                 }
                             target="_blank"
@@ -230,7 +230,7 @@ const ConsentScreen: React.FC = () => {
                         <div style={{...iframeStyle, marginTop: '1rem'}}>
                             <iframe
                                 src = {i18n.language === 'ar'
-                                        ? 'https://drive.google.com/file/d/1pbwIuUJqIH8T5RyEQE-eh9bazlNVBM6-/preview'
+                                        ? 'https://drive.google.com/file/d/1Lw_1bQsRbYbTgtocGiFXkQAixlWR-2cR/preview'
                                         : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/preview'
                                 }
                                 width="100%"
