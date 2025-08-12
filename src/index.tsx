@@ -9,18 +9,18 @@ import './assets/fonts/font.css';
 
 // Utils
 import swConfig from './utils/swConfig';
-
-
-
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
+// Always use /dh-app for both dev and prod
+const basename = '/dh-app';
+
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <App />
     </BrowserRouter>
   </React.StrictMode>
@@ -28,7 +28,6 @@ root.render(
 
 reportWebVitals();
 
-// Register service worker only in production
 if (process.env.NODE_ENV !== 'production') {
   serviceWorkerRegistration.unregister();
 } else {

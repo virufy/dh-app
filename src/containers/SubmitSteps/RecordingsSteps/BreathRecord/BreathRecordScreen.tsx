@@ -1,4 +1,4 @@
-import React, { useState, useRef , useEffect} from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 // Assets
@@ -103,7 +103,7 @@ const BreathRecordScreen: React.FC = () => {
 
             setTimeout(() => {
                 if (recorder.state === "recording") {
-                stopRecording();
+                    stopRecording();
                 }
             }, 30000); // Auto stop after 30 sec            
             setError(null);
@@ -204,7 +204,7 @@ const BreathRecordScreen: React.FC = () => {
                         marginBottom: "1.5rem",
                         color: "#000000",
                         marginTop: "1.5rem",
-                        
+
 
                     }}
                 >
@@ -258,8 +258,8 @@ const BreathRecordScreen: React.FC = () => {
                             style={{
                                 opacity: isRecording ? 0.6 : 1,
                                 cursor: isRecording ? "not-allowed" : "pointer",
-                                width:'56px',
-                                height:'56px'
+                                width: '56px',
+                                height: '56px'
                             }}
                         >
                             <img
@@ -280,8 +280,8 @@ const BreathRecordScreen: React.FC = () => {
                             style={{
                                 opacity: !isRecording ? 0.6 : 1,
                                 cursor: !isRecording ? "not-allowed" : "pointer",
-                                width:'56px',
-                                height:'56px'
+                                width: '56px',
+                                height: '56px'
                             }}
                         >
                             <img
@@ -296,22 +296,22 @@ const BreathRecordScreen: React.FC = () => {
                 </ButtonRow>
 
                 {error && (
-                <p style={{ color: "red", textAlign: "center", fontWeight: "bold" }}>
-                    {error}
-                </p>
+                    <p style={{ color: "red", textAlign: "center", fontWeight: "bold" }}>
+                        {error}
+                    </p>
                 )}
                 <button
                     type="button"
                     onClick={() => navigate('/upload-complete', { state: { nextPage: '/confirmation' } })}
                     style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    backgroundColor: '#f0f0f0',
-                    border: '1px solid #ccc',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
+                        position: 'absolute',
+                        top: '20px',
+                        right: '20px',
+                        backgroundColor: '#f0f0f0',
+                        border: '1px solid #ccc',
+                        padding: '8px 16px',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
                     }}
                 >
                     Skip
