@@ -2,15 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- ✅ Favicon path works with /dh-app -->
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/SehaDubaiLogo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="DHApp React App" />
     <title>DHApp</title>
+
     <!-- ✅ Add Google Fonts here -->
-    <link href="https://fonts.googleapis.com/css2?family=Abel&family=Source+Sans+Pro:wght@400;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Abel&family=Source+Sans+Pro:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Hotjar Tracking Code for DH APP -->
-    <!-- <script>
+    <!--
+    <script>
     (function(h,o,t,j,a,r){
         h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
         h._hjSettings={hjid:6467823,hjsv:6};
@@ -19,18 +26,33 @@
         r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
         a.appendChild(r);
     })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
-    </script> -->
+    </script>
+    -->
+
     <!-- Hotjar Tracking Code for Virufy DH app -->
     <script>
-    (function(h,o,t,j,a,r){
-        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-        h._hjSettings={hjid:6470196,hjsv:6};
-        a=o.getElementsByTagName('head')[0];
-        r=o.createElement('script');r.async=1;
-        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+      (function (h, o, t, j, a, r) {
+        h.hj =
+          h.hj ||
+          function () {
+            (h.hj.q = h.hj.q || []).push(arguments);
+          };
+        h._hjSettings = { hjid: 6470196, hjsv: 6 };
+        a = o.getElementsByTagName("head")[0];
+        r = o.createElement("script");
+        r.async = 1;
+        r.src =
+          "https://static.hotjar.com/c/hotjar-" +
+          h._hjSettings.hjid +
+          ".js?sv=" +
+          h._hjSettings.hjsv;
         a.appendChild(r);
-    })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+      })(window, document);
     </script>
+
+    <!-- ✅ Use PUBLIC_URL so scripts work with /dh-app -->
+    <script defer="defer" src="%PUBLIC_URL%/static/js/main.9c0cb1de.js"></script>
+    <link href="%PUBLIC_URL%/static/css/main.ab2247bd.css" rel="stylesheet" />
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
