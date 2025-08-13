@@ -1,2 +1,10 @@
-/dh-app/*   /index.html   200
+# Map /dh-app asset URLs to real files at root
+/dh-app/static/*            /static/:splat            200
+/dh-app/asset-manifest.json /asset-manifest.json      200
+/dh-app/manifest.json       /manifest.json            200
+/dh-app/favicon.ico         /favicon.ico              200
+/dh-app/logo192.png         /logo192.png              200
+/dh-app/logo512.png         /logo512.png              200
 
+# Send all remaining /dh-app routes to the SPA entry
+/dh-app/*                   /index.html               200
