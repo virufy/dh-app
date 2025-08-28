@@ -38,6 +38,10 @@ import {
   ModalButton
 } from "./styles";
 import { t } from "i18next";
+import RecorderService from "../../../../components/MicRecorder/RecorderService";
+
+
+
 
 const MinimumDurationModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
     <ModalOverlay>
@@ -87,65 +91,38 @@ const CoughRecordScreen: React.FC = () => {
     return `${mins}:${secs}`;
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-      recorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: "audio/wav" });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const filename = `cough_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
-        setAudioData({ audioFileUrl: audioUrl, filename });
-        sessionStorage.setItem("coughAudio", audioUrl);
-        sessionStorage.setItem("coughFilename", filename);
-      };
+const startRecording = async () => {
+  try {
+    await RecorderService.startRecording(setRecordingTime);
+    setIsRecording(true);
+    setAudioData(null);
+    setError(null);
 
+    // Auto-stop after 30s
+    setTimeout(() => {
+      if (RecorderService.isRecording()) stopRecording();
+    }, 30000);
+  } catch (err) {
+    console.error(err);
+    setError(t("recordCough.microphoneAccessError") || "Microphone access denied.");
+  }
+};
 
-      recorder.start();
-      setMediaRecorder(recorder);
-      setIsRecording(true);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
+const stopRecording = () => {
+  const data = RecorderService.stopRecording();
+  setIsRecording(false);
 
-      setTimeout(() => {
-        if (recorder.state === "recording") {
-          stopRecording();
-        }
-      }, 30000); // Auto stop after 30 sec
+  if (!data || data.duration < 3) {
+    setShowTooShortModal(true);
+    setAudioData(null);
+    return;
+  }
 
-      setError(null);
-      setAudioData(null);
-    } catch (err) {
-      console.error("Microphone access error:", err);
-      setError(
-        t("recordCough.microphoneAccessError") || "Microphone access denied."
-      );
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (recordingTime < 3) {
-      setShowTooShortModal(true);
-      setAudioData(null); // prevent submission
-    }
-    setIsRecording(false);
-    sessionStorage.setItem("coughDuration", recordingTime.toString());
-  };
+  setAudioData({ audioFileUrl: data.audioFileUrl, filename: data.filename });
+  sessionStorage.setItem("coughAudio", data.audioFileUrl);
+  sessionStorage.setItem("coughFilename", data.filename);
+  sessionStorage.setItem("coughDuration", data.duration.toString());
+};
 
   const handleContinue = () => {
     if (audioData) {
@@ -395,4 +372,3 @@ const CoughRecordScreen: React.FC = () => {
 };
 
 export default CoughRecordScreen;
-
