@@ -3,11 +3,6 @@
   "name": "dhapp",
   "version": "0.1.0",
   "private": true,
-<<<<<<< HEAD
-  
-
-=======
->>>>>>> 94c1a490e8756f807ad35b5fc15c2b6022d862f5
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
     "@testing-library/dom": "^10.4.0",
