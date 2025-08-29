@@ -1,3 +1,4 @@
+// UploadCompleteCough.tsx
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -40,13 +41,9 @@ const UploadCompleteCough: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (audioFileUrl) {
-      sessionStorage.setItem("coughAudio", audioFileUrl);
-      sessionStorage.setItem("coughFilename", filename);
-    }
-  }, [audioFileUrl, filename]);
+  // No: don't stash blob: URLs in sessionStorage — they die after reload.
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -56,62 +53,74 @@ const UploadCompleteCough: React.FC = () => {
       if (isFinite(audio.duration)) {
         setDuration(audio.duration);
       } else {
-        const fixDuration = () => {
+        // force duration calculation for some blob URLs
+        const fix = () => {
           audio.currentTime = 1e101;
           audio.ontimeupdate = () => {
             audio.ontimeupdate = null;
-            setDuration(audio.duration);
+            setDuration(audio.duration || 0);
             audio.currentTime = 0;
           };
         };
-        fixDuration();
+        fix();
       }
+      setCurrentTime(audio.currentTime || 0);
     };
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      if (audio.duration - audio.currentTime <= 0.05) {
-        setIsPlaying(false);
-      }
-    };
-
-    const handleEnded = () => {
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => { setIsPlaying(false); setCurrentTime(0); };
+    const handleError = () => {
+      setErrMsg(audio.error?.message || "Cannot play audio.");
       setIsPlaying(false);
-      setCurrentTime(0);
     };
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
 
-    if (audio.readyState >= 1) {
-      handleLoadedMetadata();
-    }
+    if (audio.readyState >= 1) handleLoadedMetadata();
 
     return () => {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
     };
   }, [audioFileUrl]);
 
   const formatTime = (seconds: number) => {
-    if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
+    if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
+    if (!audio || !audioFileUrl) {
+      setErrMsg(t("uploadComplete.noAudio", "No audio attached. Go back and record/upload a file."));
+      return;
     }
-    setIsPlaying(!isPlaying);
+    try {
+      if (audio.paused) {
+        if (audio.readyState < 2) audio.load();
+        await audio.play(); // await to catch iOS rejections
+        // isPlaying will update via 'play' event
+      } else {
+        audio.pause(); // isPlaying will update via 'pause' event
+      }
+    } catch (e) {
+      console.error("Error playing audio:", e);
+      setErrMsg("Playback failed. Try again or re-record.");
+      setIsPlaying(false);
+    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,14 +139,8 @@ const UploadCompleteCough: React.FC = () => {
       console.error("No nextPage provided in state");
       return;
     }
-
-    sessionStorage.removeItem("coughAudio");
-    sessionStorage.removeItem("coughFilename");
-
     const nextNextPage = getNextStep(nextPage);
-    navigate(nextPage, {
-      state: { nextPage: nextNextPage },
-    });
+    navigate(nextPage, { state: { nextPage: nextNextPage } });
   };
 
   const getNextStep = (currentPage: string) => {
@@ -173,20 +176,20 @@ const UploadCompleteCough: React.FC = () => {
           <Title>{t("uploadComplete.subtitle")}</Title>
           <Subtitle>{t("uploadComplete.description")}</Subtitle>
 
+          {!audioFileUrl && (
+            <Subtitle style={{ color: "#b00", fontWeight: 600 }}>
+              {t("uploadComplete.noAudio", "No audio attached. Go back and record/upload a file.")}
+            </Subtitle>
+          )}
+
           <FileRow>
             <span>{filename}</span>
             <span
-              style={{
-                fontSize: "20px",
-                cursor: "pointer",
-                alignSelf: "center",
-              }}
+              style={{ fontSize: "20px", cursor: "pointer", alignSelf: "center" }}
               onClick={handleBack}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") && handleBack()
-              }
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleBack()}
               aria-label={t("uploadComplete.closeAria")}
             >
               ✕
@@ -196,20 +199,27 @@ const UploadCompleteCough: React.FC = () => {
           <Slider
             type="range"
             min="0"
-            max={duration || 1}
+            max={duration || 0}
             value={currentTime}
             step="0.1"
             onChange={handleSeek}
             aria-label={t("uploadComplete.sliderAria")}
+            disabled={!audioFileUrl || duration === 0}
           />
 
           <TimeRow>
             <span>{formatTime(currentTime)}</span>
             <span>- {formatTime(Math.max(duration - currentTime, 0))}</span>
           </TimeRow>
+
+          {errMsg && (
+            <div style={{ color: "#b00", marginTop: 8, fontWeight: 600 }}>
+              {errMsg}
+            </div>
+          )}
         </ControlsWrapper>
 
-        <PlayButton onClick={handlePlayPause}>
+        <PlayButton onClick={handlePlayPause} disabled={!audioFileUrl || duration === 0}>
           <img
             src={isPlaying ? PauseIcon : PlayIcon}
             alt={isPlaying ? t("uploadComplete.pause") : t("uploadComplete.play")}

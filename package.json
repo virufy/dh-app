@@ -3,8 +3,11 @@
   "name": "dhapp",
   "version": "0.1.0",
   "private": true,
+<<<<<<< HEAD
   
 
+=======
+>>>>>>> 94c1a490e8756f807ad35b5fc15c2b6022d862f5
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
     "@testing-library/dom": "^10.4.0",
@@ -17,13 +20,13 @@
     "ajv-keywords": "^5.1.0",
     "audio-recorder-polyfill": "^0.4.1",
     "date-fns": "^4.1.0",
-    "i18next": "^25.3.1",
+    "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^8.2.0",
     "react": "^19.1.0",
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
-    "react-i18next": "^15.6.0",
+    "react-i18next": "^15.7.3",
     "react-router-dom": "^7.6.3",
     "react-scripts": "5.0.1",
     "react-select": "^5.10.1",
@@ -58,10 +61,11 @@
     ]
   },
   "devDependencies": {
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/react-i18next": "^7.8.3",
     "@types/react-router-dom": "^5.3.3",
     "@types/styled-components": "^5.1.34",
-    "typescript": "^5.8.3"
+    "typescript": "^4.9.5"
   }
 }
