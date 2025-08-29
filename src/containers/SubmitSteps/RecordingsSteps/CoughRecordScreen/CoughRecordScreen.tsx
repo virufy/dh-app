@@ -1,3 +1,4 @@
+// CoughRecordScreen.tsx
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -50,58 +51,93 @@ const MinimumDurationModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   </ModalOverlay>
 );
 
-/* ----------------- WAV helpers (16-bit PCM) ----------------- */
-function floatTo16BitPCM(float32: Float32Array): ArrayBuffer {
-  const buffer = new ArrayBuffer(float32.length * 2);
-  const view = new DataView(buffer);
-  let offset = 0;
-  for (let i = 0; i < float32.length; i++, offset += 2) {
-    let s = Math.max(-1, Math.min(1, float32[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-  return buffer;
+/* ----------------- Utility: pick a recorder mime that works on this browser ----------------- */
+function getBestMime(): string | undefined {
+  const candidates = [
+    "audio/mp4",                 // Safari/iOS
+    "audio/webm;codecs=opus",    // Chromium
+    "audio/webm",
+    "audio/ogg;codecs=opus"      // Firefox
+  ];
+  // @ts-ignore
+  return window.MediaRecorder?.isTypeSupported
+    ? candidates.find(m => (window as any).MediaRecorder.isTypeSupported(m))
+    : undefined;
 }
 
-// Replace the old function with this:
-function buildWavBlob(chunks: Float32Array[], sampleRate: number): Blob {
-  const total = chunks.reduce((a, b) => a + b.length, 0);
-  const mono = new Float32Array(total);
-  let off = 0;
-  for (const c of chunks) { mono.set(c, off); off += c.length; }
+/* ----------------- Utility: convert any recorded blob → real WAV ----------------- */
+async function blobToWav(
+  blob: Blob,
+  { sampleRate = 44100, channels = 1, bitsPerSample = 16 }: { sampleRate?: number; channels?: number; bitsPerSample?: number } = {}
+): Promise<Blob> {
+  const arrayBuf = await blob.arrayBuffer();
+  const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
+  const ctx = new AudioCtx();
+  const audioBuf: AudioBuffer = await new Promise((res, rej) => {
+    // Safari sometimes requires the callback version
+    try {
+      ctx.decodeAudioData(arrayBuf, res, rej);
+    } catch (e) {
+      // Fallback for modern browsers
+      (ctx as AudioContext).decodeAudioData(arrayBuf).then(res).catch(rej);
+    }
+  });
 
-  const pcmBuffer = floatTo16BitPCM(mono); // ArrayBuffer with 16-bit PCM
-  const wavBuffer = new ArrayBuffer(44 + pcmBuffer.byteLength);
-  const wavView = new DataView(wavBuffer);
+  // Downmix to mono if requested
+  const srcLen = audioBuf.length;
+  const srcRate = audioBuf.sampleRate;
+  const numSrcCh = audioBuf.numberOfChannels;
 
-  // Write WAV header
-  const numChannels = 1;
-  const blockAlign = numChannels * 2;
-  const byteRate = sampleRate * blockAlign;
+  const mono = new Float32Array(srcLen);
+  const ch0 = audioBuf.getChannelData(0);
+  mono.set(ch0);
+  if (channels === 1 && numSrcCh > 1) {
+    for (let c = 1; c < numSrcCh; c++) {
+      const d = audioBuf.getChannelData(c);
+      for (let i = 0; i < srcLen; i++) mono[i] = (mono[i] + d[i]) * 0.5;
+    }
+  }
 
-  // "RIFF"
-  wavView.setUint32(0, 0x46464952, false);
-  // file size - 8
-  wavView.setUint32(4, 36 + pcmBuffer.byteLength, true);
-  // "WAVE"
-  wavView.setUint32(8, 0x45564157, false);
-  // "fmt "
-  wavView.setUint32(12, 0x20746d66, false);
-  wavView.setUint32(16, 16, true); // Subchunk1Size (16 = PCM)
-  wavView.setUint16(20, 1, true);  // AudioFormat = PCM
-  wavView.setUint16(22, numChannels, true);
-  wavView.setUint32(24, sampleRate, true);
-  wavView.setUint32(28, byteRate, true);
-  wavView.setUint16(32, blockAlign, true);
-  wavView.setUint16(34, 16, true); // bits per sample
-  // "data"
-  wavView.setUint32(36, 0x61746164, false);
-  wavView.setUint32(40, pcmBuffer.byteLength, true);
+  // Simple resample to target sampleRate (nearest-neighbor keeps code simple & fast)
+  const ratio = sampleRate / srcRate;
+  const dstLen = Math.round(srcLen * ratio);
+  const resampled = new Float32Array(dstLen);
+  for (let i = 0; i < dstLen; i++) {
+    resampled[i] = mono[Math.min(srcLen - 1, Math.round(i / ratio))];
+  }
 
-  // Copy PCM right after the 44-byte header
-  new Uint8Array(wavBuffer, 44).set(new Uint8Array(pcmBuffer));
+  // Encode WAV header + PCM16
+  const bytesPerSample = bitsPerSample / 8;
+  const dataSize = resampled.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
 
-  // Return a single buffer as the blob
-  return new Blob([wavBuffer], { type: "audio/wav" });
+  const writeString = (off: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+  };
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);                      // Subchunk1Size (PCM)
+  view.setUint16(20, 1, true);                       // AudioFormat = PCM
+  view.setUint16(22, channels, true);                // NumChannels
+  view.setUint32(24, sampleRate, true);              // SampleRate
+  view.setUint32(28, sampleRate * channels * bytesPerSample, true); // ByteRate
+  view.setUint16(32, channels * bytesPerSample, true);              // BlockAlign
+  view.setUint16(34, bitsPerSample, true);           // BitsPerSample
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < resampled.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, resampled[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+
+  ctx.close().catch(() => {});
+  return new Blob([buffer], { type: "audio/wav" });
 }
 
 const CoughRecordScreen: React.FC = () => {
@@ -112,30 +148,22 @@ const CoughRecordScreen: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Web Audio refs
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const workletOrProcessorRef = useRef<AudioWorkletNode | ScriptProcessorNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const pcmBuffersRef = useRef<Float32Array[]>([]);
-
   const [showTooShortModal, setShowTooShortModal] = useState(false);
   const [involuntary, setInvoluntary] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioData, setAudioData] = useState<{ audioFileUrl: string; filename: string } | null>(null);
 
   useEffect(() => {
     return () => {
-      // cleanup on unmount
-      try { workletOrProcessorRef.current && (workletOrProcessorRef.current as any).disconnect?.(); } catch {}
-      try { sourceRef.current && sourceRef.current.disconnect(); } catch {}
-      try { streamRef.current?.getTracks().forEach(tr => tr.stop()); } catch {}
-      try { audioCtxRef.current?.close(); } catch {}
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (mediaRecorder && mediaRecorder.stream) {
+        try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
+      }
     };
-  }, []);
+  }, [mediaRecorder]);
 
   const handleBack = () => navigate(-1);
 
@@ -145,122 +173,74 @@ const CoughRecordScreen: React.FC = () => {
     return `${mins}:${secs}`;
   };
 
-  /* ----------------- WAV recording (client-side) ----------------- */
+  /* ----------------- Record with MediaRecorder, then convert blob → WAV ----------------- */
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      setError(null);
-      setAudioData(null);
+      const mimeType = getBestMime();
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+      recorder.onstop = async () => {
+        try {
+          const recordedType = chunks[0]?.type || recorder.mimeType || "audio/mp4";
+          const recordedBlob = new Blob(chunks, { type: recordedType });
+
+          // Convert to real WAV here (mono 44.1kHz 16-bit)
+          const wavBlob = await blobToWav(recordedBlob, { sampleRate: 44100, channels: 1, bitsPerSample: 16 });
+          const wavUrl = URL.createObjectURL(wavBlob);
+          const filename = `cough_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
+          setAudioData({ audioFileUrl: wavUrl, filename });
+        } catch (e) {
+          console.error("WAV conversion failed:", e);
+          setError(t("recordCough.error") || "Could not convert recording to WAV.");
+        }
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
       setIsRecording(true);
       setRecordingTime(0);
-      pcmBuffersRef.current = [];
+      timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
 
-      const AudioContextCtor = (window.AudioContext || (window as any).webkitAudioContext);
-      // Force 44.1kHz for standard WAV
-      const ctx: AudioContext = new AudioContextCtor({ sampleRate: 44100 }) as AudioContext;
-      audioCtxRef.current = ctx;
+      // Auto stop after 30 seconds
+      setTimeout(() => {
+        if (recorder.state === "recording") stopRecording();
+      }, 30000);
 
-      const source = ctx.createMediaStreamSource(stream);
-      sourceRef.current = source;
-
-      if ((ctx as any).audioWorklet) {
-        // Build a tiny worklet at runtime that forwards mono Float32 frames
-        const workletCode = `
-          class PCMProcessor extends AudioWorkletProcessor {
-            process(inputs) {
-              const input = inputs[0];
-              if (input && input[0]) this.port.postMessage(input[0]);
-              return true;
-            }
-          }
-          registerProcessor('pcm-processor', PCMProcessor);
-        `;
-        const blobUrl = URL.createObjectURL(new Blob([workletCode], { type: "application/javascript" }));
-        await ctx.audioWorklet!.addModule(blobUrl);
-        URL.revokeObjectURL(blobUrl);
-
-        const node = new AudioWorkletNode(ctx, "pcm-processor", {
-          numberOfInputs: 1,
-          numberOfOutputs: 0,
-          channelCount: 1
-        });
-        workletOrProcessorRef.current = node;
-        node.port.onmessage = (e: MessageEvent) => {
-          // Clone Float32Array so it doesn't get GC'd
-          pcmBuffersRef.current.push(new Float32Array(e.data as Float32Array));
-        };
-        source.connect(node);
-      } else {
-        // Fallback: ScriptProcessor
-        const processor = ctx.createScriptProcessor(4096, 1, 1);
-        workletOrProcessorRef.current = processor;
-        processor.onaudioprocess = (ev: AudioProcessingEvent) => {
-          const input = ev.inputBuffer.getChannelData(0);
-          pcmBuffersRef.current.push(new Float32Array(input));
-        };
-        source.connect(processor);
-        // Connect to destination to guarantee processing on some browsers
-        processor.connect(ctx.destination);
-      }
-
-      // UI timer
-      timerRef.current = setInterval(() => setRecordingTime((p) => p + 1), 1000);
-
-      // Auto-stop after 30s
-      setTimeout(() => { if (isRecording) stopRecording(); }, 30000);
+      setError(null);
+      setAudioData(null);
     } catch (err) {
       console.error("Microphone access error:", err);
       setError(t("recordCough.microphoneAccessError") || "Microphone access denied.");
-      setIsRecording(false);
     }
   };
 
   const stopRecording = () => {
-    try {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      setIsRecording(false);
-
-      // Stop input tracks (iOS important)
-      try { streamRef.current?.getTracks().forEach(tr => tr.stop()); } catch {}
-      streamRef.current = null;
-
-      // Disconnect audio nodes
-      try { workletOrProcessorRef.current && (workletOrProcessorRef.current as any).disconnect?.(); } catch {}
-      workletOrProcessorRef.current = null;
-      try { sourceRef.current && sourceRef.current.disconnect(); } catch {}
-      sourceRef.current = null;
-
-      const sr = audioCtxRef.current?.sampleRate || 44100;
-      audioCtxRef.current?.close().catch(() => {});
-      audioCtxRef.current = null;
-
-      if (recordingTime < 3) {
-        setShowTooShortModal(true);
-        pcmBuffersRef.current = [];
-        setAudioData(null);
-        return;
-      }
-
-      // Build WAV Blob
-      const wavBlob = buildWavBlob(pcmBuffersRef.current, sr);
-      pcmBuffersRef.current = [];
-      const url = URL.createObjectURL(wavBlob);
-      const filename = `cough_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
-      setAudioData({ audioFileUrl: url, filename });
-    } catch (e) {
-      console.error(e);
-      setError(t("recordCough.error") || "Something went wrong. Please try again.");
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+      // Stop tracks so iOS releases mic
+      try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
     }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (recordingTime < 3) {
+      setShowTooShortModal(true);
+      setAudioData(null);
+    }
+    setIsRecording(false);
   };
 
-  /* ----------------- Continue / Upload / Skip ----------------- */
   const handleContinue = () => {
     if (audioData) {
       setError(null);
       navigate("/upload-complete", {
         state: {
-          ...audioData,          // { audioFileUrl: blob:..., filename: *.wav }
+          ...audioData,  // { audioFileUrl: blob:..., filename: *.wav }
           nextPage: "/record-speech",
         },
       });
@@ -282,7 +262,6 @@ const CoughRecordScreen: React.FC = () => {
   };
 
   const triggerFileInput = () => fileInputRef.current?.click();
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -469,7 +448,6 @@ const CoughRecordScreen: React.FC = () => {
           <MinimumDurationModal
             onClose={() => {
               setShowTooShortModal(false);
-              // restart recording immediately if they want to retry
               startRecording();
             }}
           />
