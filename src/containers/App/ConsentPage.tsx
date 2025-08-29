@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { ConsentContainer, ConsentContent } from './consentscreen';
 import EnglishConsent from "../../components/Forms/EnglishConsent";
-import ArabicConsent from "../../components/Forms/ArabicConsent";
+import ArabicConsent from '../../components/Forms/ArabicConsent';
 
 
 
