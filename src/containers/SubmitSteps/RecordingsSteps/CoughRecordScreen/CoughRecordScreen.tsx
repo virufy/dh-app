@@ -51,7 +51,7 @@ const MinimumDurationModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   </ModalOverlay>
 );
 
-/* ----------------- Utility: pick a recorder mime that works on this browser ----------------- */
+/* ----------------- Pick a safe recorder mime ----------------- */
 function getBestMime(): string | undefined {
   const candidates = [
     "audio/mp4",                 // Safari/iOS
@@ -65,7 +65,7 @@ function getBestMime(): string | undefined {
     : undefined;
 }
 
-/* ----------------- Utility: convert any recorded blob → real WAV ----------------- */
+/* ----------------- Convert recorded blob → real WAV (mono, 44.1k, 16-bit) ----------------- */
 async function blobToWav(
   blob: Blob,
   { sampleRate = 44100, channels = 1, bitsPerSample = 16 }: { sampleRate?: number; channels?: number; bitsPerSample?: number } = {}
@@ -73,32 +73,24 @@ async function blobToWav(
   const arrayBuf = await blob.arrayBuffer();
   const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
   const ctx = new AudioCtx();
+
   const audioBuf: AudioBuffer = await new Promise((res, rej) => {
-    // Safari sometimes requires the callback version
-    try {
-      ctx.decodeAudioData(arrayBuf, res, rej);
-    } catch (e) {
-      // Fallback for modern browsers
-      (ctx as AudioContext).decodeAudioData(arrayBuf).then(res).catch(rej);
-    }
+    try { ctx.decodeAudioData(arrayBuf, res, rej); }
+    catch { (ctx as AudioContext).decodeAudioData(arrayBuf).then(res, rej); }
   });
 
-  // Downmix to mono if requested
   const srcLen = audioBuf.length;
   const srcRate = audioBuf.sampleRate;
-  const numSrcCh = audioBuf.numberOfChannels;
 
+  // downmix to mono
   const mono = new Float32Array(srcLen);
-  const ch0 = audioBuf.getChannelData(0);
-  mono.set(ch0);
-  if (channels === 1 && numSrcCh > 1) {
-    for (let c = 1; c < numSrcCh; c++) {
-      const d = audioBuf.getChannelData(c);
-      for (let i = 0; i < srcLen; i++) mono[i] = (mono[i] + d[i]) * 0.5;
-    }
+  mono.set(audioBuf.getChannelData(0));
+  for (let c = 1; c < audioBuf.numberOfChannels; c++) {
+    const ch = audioBuf.getChannelData(c);
+    for (let i = 0; i < srcLen; i++) mono[i] = (mono[i] + ch[i]) * 0.5;
   }
 
-  // Simple resample to target sampleRate (nearest-neighbor keeps code simple & fast)
+  // quick resample (nearest) to 44.1k
   const ratio = sampleRate / srcRate;
   const dstLen = Math.round(srcLen * ratio);
   const resampled = new Float32Array(dstLen);
@@ -106,34 +98,32 @@ async function blobToWav(
     resampled[i] = mono[Math.min(srcLen - 1, Math.round(i / ratio))];
   }
 
-  // Encode WAV header + PCM16
+  // write WAV header + PCM16
   const bytesPerSample = bitsPerSample / 8;
   const dataSize = resampled.length * bytesPerSample;
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);
 
-  const writeString = (off: number, str: string) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
-  };
+  const writeStr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
 
-  writeString(0, "RIFF");
+  writeStr(0, "RIFF");
   view.setUint32(4, 36 + dataSize, true);
-  writeString(8, "WAVE");
-  writeString(12, "fmt ");
-  view.setUint32(16, 16, true);                      // Subchunk1Size (PCM)
-  view.setUint16(20, 1, true);                       // AudioFormat = PCM
-  view.setUint16(22, channels, true);                // NumChannels
-  view.setUint32(24, sampleRate, true);              // SampleRate
-  view.setUint32(28, sampleRate * channels * bytesPerSample, true); // ByteRate
-  view.setUint16(32, channels * bytesPerSample, true);              // BlockAlign
-  view.setUint16(34, bitsPerSample, true);           // BitsPerSample
-  writeString(36, "data");
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);                // PCM
+  view.setUint16(20, 1, true);                 // format = PCM
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * channels * bytesPerSample, true);
+  view.setUint16(32, channels * bytesPerSample, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, "data");
   view.setUint32(40, dataSize, true);
 
-  let offset = 44;
-  for (let i = 0; i < resampled.length; i++, offset += 2) {
+  let off = 44;
+  for (let i = 0; i < resampled.length; i++, off += 2) {
     const s = Math.max(-1, Math.min(1, resampled[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
   }
 
   ctx.close().catch(() => {});
@@ -146,7 +136,11 @@ const CoughRecordScreen: React.FC = () => {
   const navigate = useNavigate();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timer refs (robust)
+  const tickIntervalRef = useRef<number | null>(null);
+  const autoStopTimeoutRef = useRef<number | null>(null);
+  const startTsRef = useRef<number | null>(null);
 
   const [showTooShortModal, setShowTooShortModal] = useState(false);
   const [involuntary, setInvoluntary] = useState(false);
@@ -158,8 +152,10 @@ const CoughRecordScreen: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      if (mediaRecorder && mediaRecorder.stream) {
+      // cleanup
+      if (tickIntervalRef.current != null) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null; }
+      if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
+      if (mediaRecorder?.stream) {
         try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
       }
     };
@@ -173,9 +169,13 @@ const CoughRecordScreen: React.FC = () => {
     return `${mins}:${secs}`;
   };
 
-  /* ----------------- Record with MediaRecorder, then convert blob → WAV ----------------- */
+  /* ----------------- Record with MediaRecorder, then convert to WAV ----------------- */
   const startRecording = async () => {
     try {
+      // clear old timers
+      if (tickIntervalRef.current != null) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null; }
+      if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = getBestMime();
       const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
@@ -185,10 +185,8 @@ const CoughRecordScreen: React.FC = () => {
 
       recorder.onstop = async () => {
         try {
-          const recordedType = chunks[0]?.type || recorder.mimeType || "audio/mp4";
-          const recordedBlob = new Blob(chunks, { type: recordedType });
-
-          // Convert to real WAV here (mono 44.1kHz 16-bit)
+          const type = chunks[0]?.type || recorder.mimeType || "audio/mp4";
+          const recordedBlob = new Blob(chunks, { type });
           const wavBlob = await blobToWav(recordedBlob, { sampleRate: 44100, channels: 1, bitsPerSample: 16 });
           const wavUrl = URL.createObjectURL(wavBlob);
           const filename = `cough_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
@@ -202,12 +200,20 @@ const CoughRecordScreen: React.FC = () => {
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
 
-      // Auto stop after 30 seconds
-      setTimeout(() => {
-        if (recorder.state === "recording") stopRecording();
+      // timer start
+      startTsRef.current = Date.now();
+      setRecordingTime(0);
+      tickIntervalRef.current = window.setInterval(() => {
+        if (startTsRef.current != null) {
+          const elapsed = Math.floor((Date.now() - startTsRef.current) / 1000);
+          setRecordingTime(elapsed);
+        }
+      }, 250);
+
+      // Auto stop after 30s
+      autoStopTimeoutRef.current = window.setTimeout(() => {
+        stopRecording(); // do not read stale state here
       }, 30000);
 
       setError(null);
@@ -215,32 +221,45 @@ const CoughRecordScreen: React.FC = () => {
     } catch (err) {
       console.error("Microphone access error:", err);
       setError(t("recordCough.microphoneAccessError") || "Microphone access denied.");
+      setIsRecording(false);
     }
   };
 
   const stopRecording = () => {
+    // finalize elapsed from startTs
+    const elapsed = startTsRef.current != null
+      ? Math.floor((Date.now() - startTsRef.current) / 1000)
+      : recordingTime;
+
+    // clear timers
+    if (tickIntervalRef.current != null) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null; }
+    if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
+    startTsRef.current = null;
+
+    // freeze UI time
+    setRecordingTime(elapsed);
+    setIsRecording(false);
+
+    // stop recorder + tracks
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-      // Stop tracks so iOS releases mic
+      try { mediaRecorder.stop(); } catch {}
       try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
     }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (recordingTime < 3) {
+
+    if (elapsed < 3) {
       setShowTooShortModal(true);
       setAudioData(null);
+      return;
     }
-    setIsRecording(false);
   };
 
+  /* ----------------- Continue / Upload / Skip ----------------- */
   const handleContinue = () => {
     if (audioData) {
       setError(null);
       navigate("/upload-complete", {
         state: {
-          ...audioData,  // { audioFileUrl: blob:..., filename: *.wav }
+          ...audioData,          // { audioFileUrl: blob:..., filename: *.wav }
           nextPage: "/record-speech",
         },
       });
@@ -353,12 +372,7 @@ const CoughRecordScreen: React.FC = () => {
               aria-label={t("recordCough.recordButton")}
               onClick={startRecording}
               disabled={isRecording}
-              style={{
-                opacity: isRecording ? 0.6 : 1,
-                cursor: isRecording ? "not-allowed" : "pointer",
-                width: "56px",
-                height: "56px",
-              }}
+              style={{ opacity: isRecording ? 0.6 : 1, cursor: isRecording ? "not-allowed" : "pointer", width: "56px", height: "56px" }}
             >
               <img src={StartIcon} alt={t("recordCough.recordButton")} width={28} height={28} />
             </CircleButton>
@@ -370,12 +384,7 @@ const CoughRecordScreen: React.FC = () => {
               aria-label={t("recordCough.stopButton")}
               onClick={stopRecording}
               disabled={!isRecording}
-              style={{
-                opacity: !isRecording ? 0.6 : 1,
-                cursor: !isRecording ? "not-allowed" : "pointer",
-                width: "56px",
-                height: "56px",
-              }}
+              style={{ opacity: !isRecording ? 0.6 : 1, cursor: !isRecording ? "not-allowed" : "pointer", width: "56px", height: "56px" }}
             >
               <img src={StopIcon} alt={t("recordCough.stopButton")} width={20} height={20} />
             </CircleButton>
@@ -387,70 +396,39 @@ const CoughRecordScreen: React.FC = () => {
           <Label htmlFor="involuntary" style={{ userSelect: "none" }}>
             {t("recordCough.checkboxLabel")}
           </Label>
-          <Checkbox
-            id="involuntary"
-            type="checkbox"
-            checked={involuntary}
-            onChange={() => setInvoluntary(!involuntary)}
-            style={{ cursor: "pointer" }}
-          />
+          <Checkbox id="involuntary" type="checkbox" checked={involuntary} onChange={() => setInvoluntary(!involuntary)} style={{ cursor: "pointer" }} />
         </CheckboxRow>
 
-        {error && (
-          <p style={{ color: "red", textAlign: "center", fontWeight: "bold" }}>
-            {error}
-          </p>
-        )}
+        {error && (<p style={{ color: "red", textAlign: "center", fontWeight: "bold" }}>{error}</p>)}
 
         {/* Quick Skip for testing */}
         <button
           type="button"
           onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-speech" } })}
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "20px",
-            backgroundColor: "#f0f0f0",
-            border: "1px solid #ccc",
-            padding: "8px 16px",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
+          style={{ position: "absolute", top: "20px", right: "20px", backgroundColor: "#f0f0f0", border: "1px solid #ccc", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}
         >
           Skip
         </button>
 
         <ActionButtons>
-          <button onClick={handleContinue}>
-            {t("recordCough.continueButton")}
-          </button>
-
-          <UploadButton onClick={triggerFileInput} aria-label={t("recordCough.uploadFile")}>
-            <img
-              src={UploadIcon}
-              alt={t("recordCough.uploadFile")}
-              width={22}
-              height={22}
-              style={{ marginBottom: "0.3rem", marginRight: "0.5rem" }}
-            />
+          <button onClick={handleContinue}>{t("recordCough.continueButton")}</button>
+          <UploadButton onClick={() => fileInputRef.current?.click()} aria-label={t("recordCough.uploadFile")}>
+            <img src={UploadIcon} alt={t("recordCough.uploadFile")} width={22} height={22} style={{ marginBottom: "0.3rem", marginRight: "0.5rem" }} />
             <UploadText>{t("recordCough.uploadFile")}</UploadText>
           </UploadButton>
-
-          <HiddenFileInput
-            type="file"
-            accept="audio/*"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-          />
+          <HiddenFileInput type="file" accept="audio/*" ref={fileInputRef} onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const audioUrl = URL.createObjectURL(file);
+            navigate("/upload-complete", { state: { audioFileUrl: audioUrl, filename: file.name, nextPage: "/record-speech" } });
+          }}/>
         </ActionButtons>
 
         {showTooShortModal && (
-          <MinimumDurationModal
-            onClose={() => {
-              setShowTooShortModal(false);
-              startRecording();
-            }}
-          />
+          <MinimumDurationModal onClose={() => {
+            setShowTooShortModal(false);
+            startRecording();
+          }}/>
         )}
 
         <FooterLink
