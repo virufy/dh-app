@@ -137,10 +137,11 @@ const CoughRecordScreen: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Timer refs (robust)
-  const tickIntervalRef = useRef<number | null>(null);
+  // Timer via rAF to avoid Safari throttling
+  const rafRef = useRef<number | null>(null);
   const autoStopTimeoutRef = useRef<number | null>(null);
-  const startTsRef = useRef<number | null>(null);
+  const startPerfRef = useRef<number | null>(null);
+  const lastShownSecRef = useRef<number>(0);
 
   const [showTooShortModal, setShowTooShortModal] = useState(false);
   const [involuntary, setInvoluntary] = useState(false);
@@ -152,9 +153,8 @@ const CoughRecordScreen: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      // cleanup
-      if (tickIntervalRef.current != null) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null; }
-      if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      if (autoStopTimeoutRef.current != null) clearTimeout(autoStopTimeoutRef.current);
       if (mediaRecorder?.stream) {
         try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
       }
@@ -169,11 +169,22 @@ const CoughRecordScreen: React.FC = () => {
     return `${mins}:${secs}`;
   };
 
+  // rAF tick driving the timer
+  const tick = () => {
+    if (startPerfRef.current == null) return;
+    const elapsedSec = Math.floor((performance.now() - startPerfRef.current) / 1000);
+    if (elapsedSec !== lastShownSecRef.current) {
+      lastShownSecRef.current = elapsedSec;
+      setRecordingTime(elapsedSec);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
   /* ----------------- Record with MediaRecorder, then convert to WAV ----------------- */
   const startRecording = async () => {
     try {
       // clear old timers
-      if (tickIntervalRef.current != null) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null; }
+      if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -201,19 +212,15 @@ const CoughRecordScreen: React.FC = () => {
       setMediaRecorder(recorder);
       setIsRecording(true);
 
-      // timer start
-      startTsRef.current = Date.now();
+      // start timer
+      startPerfRef.current = performance.now();
+      lastShownSecRef.current = 0;
       setRecordingTime(0);
-      tickIntervalRef.current = window.setInterval(() => {
-        if (startTsRef.current != null) {
-          const elapsed = Math.floor((Date.now() - startTsRef.current) / 1000);
-          setRecordingTime(elapsed);
-        }
-      }, 250);
+      rafRef.current = requestAnimationFrame(tick);
 
       // Auto stop after 30s
       autoStopTimeoutRef.current = window.setTimeout(() => {
-        stopRecording(); // do not read stale state here
+        stopRecording(); // do not rely on captured state
       }, 30000);
 
       setError(null);
@@ -226,17 +233,15 @@ const CoughRecordScreen: React.FC = () => {
   };
 
   const stopRecording = () => {
-    // finalize elapsed from startTs
-    const elapsed = startTsRef.current != null
-      ? Math.floor((Date.now() - startTsRef.current) / 1000)
+    // compute final elapsed
+    const elapsed = startPerfRef.current != null
+      ? Math.floor((performance.now() - startPerfRef.current) / 1000)
       : recordingTime;
 
-    // clear timers
-    if (tickIntervalRef.current != null) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null; }
+    // stop timer
+    if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
-    startTsRef.current = null;
-
-    // freeze UI time
+    startPerfRef.current = null;
     setRecordingTime(elapsed);
     setIsRecording(false);
 
@@ -278,20 +283,6 @@ const CoughRecordScreen: React.FC = () => {
         });
       }
     }
-  };
-
-  const triggerFileInput = () => fileInputRef.current?.click();
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const audioUrl = URL.createObjectURL(file);
-    navigate("/upload-complete", {
-      state: {
-        audioFileUrl: audioUrl,
-        filename: file.name,
-        nextPage: "/record-speech",
-      },
-    });
   };
 
   return (
