@@ -53,37 +53,28 @@ const UploadCompleteCough: React.FC = () => {
     if (!audio) return;
 
     const handleLoadedMetadata = () => {
-      if (isFinite(audio.duration)) {
-        setDuration(audio.duration);
-      } else {
-        const fixDuration = () => {
-          audio.currentTime = 1e101;
-          audio.ontimeupdate = () => {
-            audio.ontimeupdate = null;
-            setDuration(audio.duration);
-            audio.currentTime = 0;
-          };
-        };
-        fixDuration();
-      }
+      // Ensure duration is a finite number, otherwise default to 0
+      setDuration(isFinite(audio.duration) ? audio.duration : 0);
+      setCurrentTime(audio.currentTime); // Initialize current time
     };
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
-      if (audio.duration - audio.currentTime <= 0.05) {
-        setIsPlaying(false);
-      }
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
+      if (audio) {
+        audio.currentTime = 0; // Reset audio element's time to beginning
+      }
     };
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("ended", handleEnded);
 
+    // If audio is already loaded by the time the effect runs
     if (audio.readyState >= 1) {
       handleLoadedMetadata();
     }
@@ -93,10 +84,10 @@ const UploadCompleteCough: React.FC = () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [audioFileUrl]);
+  }, [audioFileUrl]); // Re-run effect if audioFileUrl changes
 
   const formatTime = (seconds: number) => {
-    if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
+    if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) return "0:00"; // Handle negative seconds
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
@@ -109,7 +100,15 @@ const UploadCompleteCough: React.FC = () => {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      // If audio ended, reset currentTime to 0 before playing
+      if (audio.ended || currentTime === duration) {
+        audio.currentTime = 0;
+        setCurrentTime(0);
+      }
+      audio.play().catch(error => {
+        console.error("Error playing audio:", error);
+        // Handle play error, e.g., by setting an error state
+      });
     }
     setIsPlaying(!isPlaying);
   };
@@ -196,11 +195,12 @@ const UploadCompleteCough: React.FC = () => {
           <Slider
             type="range"
             min="0"
-            max={duration || 1}
+            max={duration || 0} // Ensure max is not NaN
             value={currentTime}
             step="0.1"
             onChange={handleSeek}
             aria-label={t("uploadComplete.sliderAria")}
+            disabled={!audioFileUrl || duration === 0} // Disable slider if no audio or duration is 0
           />
 
           <TimeRow>
@@ -209,7 +209,7 @@ const UploadCompleteCough: React.FC = () => {
           </TimeRow>
         </ControlsWrapper>
 
-        <PlayButton onClick={handlePlayPause}>
+        <PlayButton onClick={handlePlayPause} disabled={!audioFileUrl || duration === 0}>
           <img
             src={isPlaying ? PauseIcon : PlayIcon}
             alt={isPlaying ? t("uploadComplete.pause") : t("uploadComplete.play")}
