@@ -42,83 +42,38 @@ const MinimumDurationModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   </ModalOverlay>
 );
 
-/* ----------------- Pick a safe recorder mime ----------------- */
-function getBestMime(): string | undefined {
-  const candidates = [
-    "audio/mp4",                 // Safari/iOS
-    "audio/webm;codecs=opus",    // Chromium
-    "audio/webm",
-    "audio/ogg;codecs=opus"      // Firefox
-  ];
-  // @ts-ignore
-  return window.MediaRecorder?.isTypeSupported
-    ? candidates.find(m => (window as any).MediaRecorder.isTypeSupported(m))
-    : undefined;
-}
-
-/* ----------------- Convert recorded blob → real WAV (mono 44.1k 16-bit) ----------------- */
-async function blobToWav(
-  blob: Blob,
-  { sampleRate = 44100, channels = 1, bitsPerSample = 16 }: { sampleRate?: number; channels?: number; bitsPerSample?: number } = {}
-): Promise<Blob> {
-  const arrayBuf = await blob.arrayBuffer();
-  const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
-  const ctx = new AudioCtx();
-
-  const audioBuf: AudioBuffer = await new Promise((res, rej) => {
-    try { ctx.decodeAudioData(arrayBuf, res, rej); }
-    catch { (ctx as AudioContext).decodeAudioData(arrayBuf).then(res, rej); }
-  });
-
-  const srcLen = audioBuf.length;
-  const srcRate = audioBuf.sampleRate;
-
-  // Downmix to mono
-  const mono = new Float32Array(srcLen);
-  mono.set(audioBuf.getChannelData(0));
-  for (let c = 1; c < audioBuf.numberOfChannels; c++) {
-    const ch = audioBuf.getChannelData(c);
-    for (let i = 0; i < srcLen; i++) mono[i] = (mono[i] + ch[i]) * 0.5;
-  }
-
-  // Quick resample (nearest) to target rate
-  const ratio = sampleRate / srcRate;
-  const dstLen = Math.round(srcLen * ratio);
-  const resampled = new Float32Array(dstLen);
-  for (let i = 0; i < dstLen; i++) {
-    resampled[i] = mono[Math.min(srcLen - 1, Math.round(i / ratio))];
-  }
-
-  // Encode WAV header + PCM16
-  const bytesPerSample = bitsPerSample / 8;
-  const dataSize = resampled.length * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataSize);
+/* ----------------- Encode Float32 → PCM WAV (same as cough) ----------------- */
+function encodeWav(samples: Float32Array, sampleRate = 44100): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
   const view = new DataView(buffer);
 
-  const writeStr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  const writeStr = (off: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+  };
 
+  // WAV header
   writeStr(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
+  view.setUint32(4, 36 + samples.length * 2, true);
   writeStr(8, "WAVE");
   writeStr(12, "fmt ");
-  view.setUint32(16, 16, true);                    // PCM
-  view.setUint16(20, 1, true);                     // format = PCM
-  view.setUint16(22, channels, true);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
   view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * channels * bytesPerSample, true);
-  view.setUint16(32, channels * bytesPerSample, true);
-  view.setUint16(34, bitsPerSample, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate (sr * channels * bytes/sample)
+  view.setUint16(32, 2, true); // block align (channels * bytes/sample)
+  view.setUint16(34, 16, true); // bits per sample
   writeStr(36, "data");
-  view.setUint32(40, dataSize, true);
+  view.setUint32(40, samples.length * 2, true);
 
-  let off = 44;
-  for (let i = 0; i < resampled.length; i++, off += 2) {
-    const s = Math.max(-1, Math.min(1, resampled[i]));
-    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  // PCM samples
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
   }
 
-  ctx.close().catch(() => {});
-  return new Blob([buffer], { type: "audio/wav" });
+  return new Blob([view], { type: "audio/wav" });
 }
 
 const SpeechRecordScreen: React.FC = () => {
@@ -127,28 +82,29 @@ const SpeechRecordScreen: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // rAF-based timer (works reliably on Windows/Chrome too)
-  const rafRef = useRef<number | null>(null);
-  const autoStopTimeoutRef = useRef<number | null>(null);
-  const startPerfRef = useRef<number | null>(null);
-  const lastShownSecRef = useRef<number>(0);
+  // EXACT same scheme as cough: AudioContext + ScriptProcessor + Float32 chunks
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const chunksRef = useRef<Float32Array[]>([]);
 
   const [showTooShortModal, setShowTooShortModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioData, setAudioData] = useState<{ audioFileUrl: string; filename: string } | null>(null);
 
+  const timerRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
   useEffect(() => {
     return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      if (autoStopTimeoutRef.current != null) clearTimeout(autoStopTimeoutRef.current);
-      if (mediaRecorder?.stream) {
-        try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
+      stopRecording();
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
       }
     };
-  }, [mediaRecorder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleBack = () => navigate(-1);
 
@@ -158,65 +114,42 @@ const SpeechRecordScreen: React.FC = () => {
     return `${mins}:${secs}`;
   };
 
-  // Drive timer from rAF to avoid throttling / setInterval issues
-  const tick = () => {
-    if (startPerfRef.current == null) return;
-    const elapsedSec = Math.floor((performance.now() - startPerfRef.current) / 1000);
-    if (elapsedSec !== lastShownSecRef.current) {
-      lastShownSecRef.current = elapsedSec;
-      setRecordingTime(elapsedSec);
-    }
-    rafRef.current = requestAnimationFrame(tick);
-  };
-
-  /* ----------------- Record, then convert to WAV ----------------- */
+  /* ----------------- Start Recording (lossless, like cough) ----------------- */
   const startRecording = async () => {
     try {
-      // clear any previous timers
-      if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = getBestMime();
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const ctx = new AudioContext({ sampleRate: 44100 });
+      const source = ctx.createMediaStreamSource(stream);
+      const processor = ctx.createScriptProcessor(4096, 1, 1);
 
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      chunksRef.current = [];
+      source.connect(processor);
+      processor.connect(ctx.destination);
 
-      recorder.onstop = async () => {
-        try {
-          const type = chunks[0]?.type || recorder.mimeType || "audio/mp4";
-          const recordedBlob = new Blob(chunks, { type });
-          const wavBlob = await blobToWav(recordedBlob, { sampleRate: 44100, channels: 1, bitsPerSample: 16 });
-          const wavUrl = URL.createObjectURL(wavBlob);
-          const filename = `speech_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
-          setAudioData({ audioFileUrl: wavUrl, filename });
-          sessionStorage.setItem("speechAudio", wavUrl);
-          sessionStorage.setItem("speechFilename", filename);
-          sessionStorage.setItem("speechDuration", String(recordingTime));
-        } catch (e) {
-          console.error("WAV conversion failed:", e);
-          setError(t("recordSpeech.error") || "Could not convert recording to WAV.");
-        }
+      processor.onaudioprocess = (e) => {
+        const input = e.inputBuffer.getChannelData(0);
+        // copy the buffer so we don't keep references to the same underlying array
+        chunksRef.current.push(new Float32Array(input));
       };
 
-      recorder.start();
-      setMediaRecorder(recorder);
+      audioCtxRef.current = ctx;
+      processorRef.current = processor;
+
       setIsRecording(true);
-
-      // start timer immediately
-      startPerfRef.current = performance.now();
-      lastShownSecRef.current = 0;
       setRecordingTime(0);
-      rafRef.current = requestAnimationFrame(tick);
-
-      // Auto-stop after 30s
-      autoStopTimeoutRef.current = window.setTimeout(() => {
-        stopRecording();
-      }, 30000);
-
       setError(null);
       setAudioData(null);
+
+      startTimeRef.current = Date.now();
+      timerRef.current = window.setInterval(() => {
+        if (startTimeRef.current != null) {
+          const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          setRecordingTime(elapsed);
+        }
+      }, 1000);
+
+      // auto stop after 30s
+      setTimeout(() => stopRecording(), 30000);
     } catch (err) {
       console.error("Microphone access error:", err);
       setError(t("recordSpeech.microphoneAccessError") || "Microphone access denied.");
@@ -224,28 +157,49 @@ const SpeechRecordScreen: React.FC = () => {
     }
   };
 
+  /* ----------------- Stop Recording (same flow as cough) ----------------- */
   const stopRecording = () => {
-    // finalize timer
-    const elapsed = startPerfRef.current != null
-      ? Math.floor((performance.now() - startPerfRef.current) / 1000)
-      : recordingTime;
+    if (!isRecording) return;
 
-    if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-    if (autoStopTimeoutRef.current != null) { clearTimeout(autoStopTimeoutRef.current); autoStopTimeoutRef.current = null; }
-    startPerfRef.current = null;
-    setRecordingTime(elapsed);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const ctx = audioCtxRef.current;
+    const processor = processorRef.current;
+    if (processor) {
+      try { processor.disconnect(); } catch {}
+    }
+    if (ctx) {
+      try { ctx.close(); } catch {}
+    }
+
+    // flatten chunks → single Float32Array
+    const flat = chunksRef.current.length
+      ? new Float32Array(chunksRef.current.reduce((acc, cur) => acc + cur.length, 0))
+      : null;
+
+    if (flat) {
+      let offset = 0;
+      for (const chunk of chunksRef.current) {
+        flat.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      const wavBlob = encodeWav(flat, 44100);
+      const wavUrl = URL.createObjectURL(wavBlob);
+      const filename = `speech_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
+
+      if (recordingTime < 3) {
+        setShowTooShortModal(true);
+        setAudioData(null);
+      } else {
+        setAudioData({ audioFileUrl: wavUrl, filename });
+      }
+    }
+
     setIsRecording(false);
-
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      try { mediaRecorder.stop(); } catch {}
-      try { mediaRecorder.stream.getTracks().forEach(tr => tr.stop()); } catch {}
-    }
-
-    if (elapsed < 3) {
-      setShowTooShortModal(true);
-      setAudioData(null);
-      return;
-    }
   };
 
   /* ----------------- Continue / Upload / Skip ----------------- */
@@ -253,10 +207,7 @@ const SpeechRecordScreen: React.FC = () => {
     if (audioData) {
       setError(null);
       navigate("/upload-complete", {
-        state: {
-          ...audioData,              // { audioFileUrl: blob:..., filename: *.wav }
-          nextPage: "/record-breath" // next step after speech
-        },
+        state: { ...audioData, nextPage: "/record-breath" }
       });
     } else {
       const file = fileInputRef.current?.files?.[0];

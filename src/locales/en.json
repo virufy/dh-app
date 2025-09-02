@@ -166,7 +166,8 @@
     "backAlt": "Back",
     "sliderAria": "Audio seek slider",
     "play": "Play audio",
-    "pause": "Pause audio"
+    "pause": "Pause audio",
+    "noAudio": "No audio attached. Go back and record/upload a file."
 
   }
 }

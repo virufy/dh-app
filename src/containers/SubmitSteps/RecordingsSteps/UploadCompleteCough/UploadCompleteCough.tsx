@@ -43,7 +43,6 @@ const UploadCompleteCough: React.FC = () => {
   const [duration, setDuration] = useState(0);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // No: don't stash blob: URLs in sessionStorage — they die after reload.
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -178,7 +177,7 @@ const UploadCompleteCough: React.FC = () => {
 
           {!audioFileUrl && (
             <Subtitle style={{ color: "#b00", fontWeight: 600 }}>
-              {t("uploadComplete.noAudio", "No audio attached. Go back and record/upload a file.")}
+              {t("uploadComplete.noAudio")}
             </Subtitle>
           )}
 
