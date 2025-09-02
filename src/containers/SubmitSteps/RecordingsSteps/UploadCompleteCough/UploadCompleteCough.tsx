@@ -35,7 +35,7 @@ const UploadCompleteCough: React.FC = () => {
   const { t } = useTranslation();
 
   const { audioFileUrl, filename = t("uploadComplete.filename"), nextPage } =
-    location.state || {};
+    (location.state as { audioFileUrl?: string; filename?: string; nextPage?: string }) || {};
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -43,6 +43,25 @@ const UploadCompleteCough: React.FC = () => {
   const [duration, setDuration] = useState(0);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
+  // Force the audio element to reload whenever the source URL changes (same component instance across flows)
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+
+    // hard reset state
+    try { a.pause(); } catch {}
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    // update src and force reload (Safari/iOS + Chromium reliability)
+    if (audioFileUrl) {
+      a.src = audioFileUrl;
+      try { a.load(); } catch {}
+    } else {
+      a.removeAttribute("src");
+    }
+  }, [audioFileUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -52,13 +71,14 @@ const UploadCompleteCough: React.FC = () => {
       if (isFinite(audio.duration)) {
         setDuration(audio.duration);
       } else {
-        // force duration calculation for some blob URLs
+        // Force a metadata calc pass for blob: URLs on some browsers
         const fix = () => {
+          const prev = audio.currentTime;
           audio.currentTime = 1e101;
           audio.ontimeupdate = () => {
             audio.ontimeupdate = null;
             setDuration(audio.duration || 0);
-            audio.currentTime = 0;
+            audio.currentTime = isFinite(prev) ? prev : 0;
           };
         };
         fix();
@@ -82,6 +102,7 @@ const UploadCompleteCough: React.FC = () => {
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
 
+    // If metadata already available (fast path)
     if (audio.readyState >= 1) handleLoadedMetadata();
 
     return () => {
@@ -109,11 +130,12 @@ const UploadCompleteCough: React.FC = () => {
     }
     try {
       if (audio.paused) {
-        if (audio.readyState < 2) audio.load();
-        await audio.play(); // await to catch iOS rejections
-        // isPlaying will update via 'play' event
+        if (audio.readyState < 2) {
+          try { audio.load(); } catch {}
+        }
+        await audio.play(); // user gesture present (button)
       } else {
-        audio.pause(); // isPlaying will update via 'pause' event
+        audio.pause();
       }
     } catch (e) {
       console.error("Error playing audio:", e);
@@ -156,7 +178,14 @@ const UploadCompleteCough: React.FC = () => {
   return (
     <PageWrapper>
       <ContentWrapper>
-        <audio ref={audioRef} src={audioFileUrl || ""} preload="auto" />
+        {/* key forces React to remount <audio> when URL changes between flows */}
+        <audio
+          key={audioFileUrl || "no-src"}
+          ref={audioRef}
+          src={audioFileUrl || ""}
+          preload="auto"
+          playsInline
+        />
 
         <ControlsWrapper>
           <Header>
