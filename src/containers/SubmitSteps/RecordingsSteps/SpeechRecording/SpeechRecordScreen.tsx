@@ -87,6 +87,11 @@ const SpeechRecordScreen: React.FC = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const chunksRef = useRef<Float32Array[]>([]);
 
+  // Added: stream + monitor for explicit self-monitoring and proper cleanup
+  const streamRef = useRef<MediaStream | null>(null);
+  const monitorNodeRef = useRef<GainNode | null>(null);
+  const ENABLE_MONITOR = true; // set false if you don't want to hear yourself
+
   const [showTooShortModal, setShowTooShortModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -101,6 +106,11 @@ const SpeechRecordScreen: React.FC = () => {
       stopRecording();
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(() => {});
+      }
+      // ensure tracks are stopped if we unmount mid-record
+      if (streamRef.current) {
+        try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch {}
+        streamRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,12 +129,24 @@ const SpeechRecordScreen: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const ctx = new AudioContext({ sampleRate: 44100 });
+      // iOS Safari: make sure context is running after user gesture
+      try { await ctx.resume(); } catch {}
+
       const source = ctx.createMediaStreamSource(stream);
       const processor = ctx.createScriptProcessor(4096, 1, 1);
 
       chunksRef.current = [];
       source.connect(processor);
       processor.connect(ctx.destination);
+
+      // optional live monitor so you can hear yourself
+      if (ENABLE_MONITOR) {
+        const monitor = ctx.createGain();
+        monitor.gain.value = 1; // reduce if you get feedback
+        source.connect(monitor);
+        monitor.connect(ctx.destination);
+        monitorNodeRef.current = monitor;
+      }
 
       processor.onaudioprocess = (e) => {
         const input = e.inputBuffer.getChannelData(0);
@@ -134,6 +156,7 @@ const SpeechRecordScreen: React.FC = () => {
 
       audioCtxRef.current = ctx;
       processorRef.current = processor;
+      streamRef.current = stream;
 
       setIsRecording(true);
       setRecordingTime(0);
@@ -168,11 +191,24 @@ const SpeechRecordScreen: React.FC = () => {
 
     const ctx = audioCtxRef.current;
     const processor = processorRef.current;
+
+    // remove monitor path
+    if (monitorNodeRef.current) {
+      try { monitorNodeRef.current.disconnect(); } catch {}
+      monitorNodeRef.current = null;
+    }
+
     if (processor) {
       try { processor.disconnect(); } catch {}
     }
     if (ctx) {
       try { ctx.close(); } catch {}
+    }
+
+    // stop the mic tracks cleanly so the OS mic indicator stops
+    if (streamRef.current) {
+      try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch {}
+      streamRef.current = null;
     }
 
     // flatten chunks → single Float32Array
