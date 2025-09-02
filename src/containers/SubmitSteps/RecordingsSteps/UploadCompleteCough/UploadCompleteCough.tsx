@@ -43,45 +43,45 @@ const UploadCompleteCough: React.FC = () => {
   const [duration, setDuration] = useState(0);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // Force the audio element to reload whenever the source URL changes (same component instance across flows)
-  useEffect(() => {
-    const a = audioRef.current;
-    if (!a) return;
-
-    // hard reset state
-    try { a.pause(); } catch {}
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-
-    // update src and force reload (Safari/iOS + Chromium reliability)
-    if (audioFileUrl) {
-      a.src = audioFileUrl;
-      try { a.load(); } catch {}
-    } else {
-      a.removeAttribute("src");
-    }
-  }, [audioFileUrl]);
-
+  // iOS/Safari: force <audio> to pick up the new blob and reset state whenever src changes.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Always reset on URL change
+    try {
+      audio.pause();
+    } catch {}
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    // Important on iOS: explicitly (re)load the new blob URL
+    if (audioFileUrl) {
+      try {
+        audio.load();
+      } catch (e) {
+        // no-op
+      }
+    }
+
+    // Wire events after ensuring we loaded the new source
     const handleLoadedMetadata = () => {
-      if (isFinite(audio.duration)) {
+      if (Number.isFinite(audio.duration)) {
         setDuration(audio.duration);
       } else {
-        // Force a metadata calc pass for blob: URLs on some browsers
-        const fix = () => {
-          const prev = audio.currentTime;
+        // Some blob URLs need a nudge for duration on WebKit
+        const prev = audio.ontimeupdate;
+        try {
           audio.currentTime = 1e101;
-          audio.ontimeupdate = () => {
-            audio.ontimeupdate = null;
-            setDuration(audio.duration || 0);
-            audio.currentTime = isFinite(prev) ? prev : 0;
-          };
+        } catch {}
+        audio.ontimeupdate = () => {
+          audio.ontimeupdate = prev || null;
+          setDuration(audio.duration || 0);
+          try {
+            audio.currentTime = 0;
+          } catch {}
         };
-        fix();
       }
       setCurrentTime(audio.currentTime || 0);
     };
@@ -89,7 +89,10 @@ const UploadCompleteCough: React.FC = () => {
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => { setIsPlaying(false); setCurrentTime(0); };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
     const handleError = () => {
       setErrMsg(audio.error?.message || "Cannot play audio.");
       setIsPlaying(false);
@@ -102,7 +105,7 @@ const UploadCompleteCough: React.FC = () => {
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
 
-    // If metadata already available (fast path)
+    // If already ready, populate immediately
     if (audio.readyState >= 1) handleLoadedMetadata();
 
     return () => {
@@ -125,29 +128,35 @@ const UploadCompleteCough: React.FC = () => {
   const handlePlayPause = async () => {
     const audio = audioRef.current;
     if (!audio || !audioFileUrl) {
-      setErrMsg(t("uploadComplete.noAudio", "No audio attached. Go back and record/upload a file."));
+      setErrMsg(
+        t("uploadComplete.noAudio", "No audio attached. Go back and record/upload a file.")
+      );
       return;
     }
     try {
       if (audio.paused) {
-        if (audio.readyState < 2) {
-          try { audio.load(); } catch {}
-        }
-        await audio.play(); // user gesture present (button)
+        // Keep this inside the click handler for iOS gesture requirement
+        if (audio.readyState < 2) audio.load();
+        await audio.play();
+        // isPlaying flips via 'play' event
       } else {
         audio.pause();
+        // isPlaying flips via 'pause' event
       }
     } catch (e) {
       console.error("Error playing audio:", e);
-      setErrMsg("Playback failed. Try again or re-record.");
+      setErrMsg("Playback failed. Tap again to allow sound on iOS.");
       setIsPlaying(false);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
+    const audio = audioRef.current;
+    if (audio) {
+      try {
+        audio.currentTime = newTime;
+      } catch {}
       setCurrentTime(newTime);
     }
   };
@@ -178,7 +187,7 @@ const UploadCompleteCough: React.FC = () => {
   return (
     <PageWrapper>
       <ContentWrapper>
-        {/* key forces React to remount <audio> when URL changes between flows */}
+        {/* key forces a full remount when the blob URL changes (critical for iOS) */}
         <audio
           key={audioFileUrl || "no-src"}
           ref={audioRef}
