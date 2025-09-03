@@ -127,7 +127,15 @@ const CoughRecordScreen: React.FC = () => {
   /* ----------------- Start Recording (lossless) ----------------- */
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          sampleRate: 44100,
+        },
+      });
       const ctx = new AudioContext({ sampleRate: 44100 });
       const source = ctx.createMediaStreamSource(stream);
       const processor = ctx.createScriptProcessor(4096, 1, 1);

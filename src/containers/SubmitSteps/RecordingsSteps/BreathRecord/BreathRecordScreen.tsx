@@ -51,7 +51,7 @@ const MinimumDurationModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   </ModalOverlay>
 );
 
-/* ----------------- Encode Float32 → PCM WAV (same as cough) ----------------- */
+/* ----------------- Encode Float32 → PCM WAV ----------------- */
 function encodeWav(samples: Float32Array, sampleRate = 44100): Blob {
   const buffer = new ArrayBuffer(44 + samples.length * 2);
   const view = new DataView(buffer);
@@ -75,7 +75,7 @@ function encodeWav(samples: Float32Array, sampleRate = 44100): Blob {
   writeStr(36, "data");
   view.setUint32(40, samples.length * 2, true);
 
-  // PCM samples
+  // PCM16 samples
   let offset = 44;
   for (let i = 0; i < samples.length; i++, offset += 2) {
     const s = Math.max(-1, Math.min(1, samples[i]));
@@ -92,10 +92,12 @@ const BreathRecordScreen: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // EXACT same scheme as cough: AudioContext + ScriptProcessor + Float32 chunks
+  // Web Audio + stream refs
   const audioCtxRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Float32Array[]>([]);
+  const sampleRateRef = useRef<number>(44100);
 
   const [error, setError] = useState<string | null>(null);
   const [showTooShortModal, setShowTooShortModal] = useState(false);
@@ -108,9 +110,15 @@ const BreathRecordScreen: React.FC = () => {
 
   useEffect(() => {
     return () => {
+      // cleanup on unmount
       stopRecording();
       if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
+        try { audioCtxRef.current.close(); } catch {}
+        audioCtxRef.current = null;
+      }
+      if (streamRef.current) {
+        try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch {}
+        streamRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,21 +132,38 @@ const BreathRecordScreen: React.FC = () => {
     return `${mins}:${secs}`;
   };
 
-  /* ----------------- Start Recording (lossless, like cough) ----------------- */
+  /* ----------------- Start Recording (lossless, iOS-safe) ----------------- */
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new AudioContext({ sampleRate: 44100 });
+      const constraints: MediaStreamConstraints = {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          sampleRate: 44100
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      const AC: typeof AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AC({ sampleRate: 44100 });
+      // iOS may ignore requested rate — capture the real one:
+      sampleRateRef.current = ctx.sampleRate;
+
       const source = ctx.createMediaStreamSource(stream);
       const processor = ctx.createScriptProcessor(4096, 1, 1);
 
       chunksRef.current = [];
       source.connect(processor);
+      // keep processor "audible" so iOS fires callbacks
       processor.connect(ctx.destination);
 
       processor.onaudioprocess = (e) => {
         const input = e.inputBuffer.getChannelData(0);
-        // copy so we don't keep a reference to the same buffer
+        // copy to avoid reusing internal buffers
         chunksRef.current.push(new Float32Array(input));
       };
 
@@ -160,7 +185,7 @@ const BreathRecordScreen: React.FC = () => {
       }, 1000);
 
       // auto stop after 30s
-      setTimeout(() => stopRecording(), 30000);
+      window.setTimeout(() => stopRecording(), 30000);
     } catch (err) {
       console.error("Microphone access error:", err);
       setError(t("recordBreath.microphoneAccessError") || "Microphone access denied.");
@@ -168,9 +193,9 @@ const BreathRecordScreen: React.FC = () => {
     }
   };
 
-  /* ----------------- Stop Recording (same flow as cough) ----------------- */
+  /* ----------------- Stop Recording ----------------- */
   const stopRecording = () => {
-    if (!isRecording) return;
+    if (!isRecording && !audioCtxRef.current) return;
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -181,24 +206,29 @@ const BreathRecordScreen: React.FC = () => {
     const processor = processorRef.current;
     if (processor) {
       try { processor.disconnect(); } catch {}
+      processorRef.current = null;
     }
     if (ctx) {
       try { ctx.close(); } catch {}
+      audioCtxRef.current = null;
+    }
+    if (streamRef.current) {
+      try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch {}
+      streamRef.current = null;
     }
 
     // flatten chunks → single Float32Array
-    const flat = chunksRef.current.length
-      ? new Float32Array(chunksRef.current.reduce((acc, cur) => acc + cur.length, 0))
-      : null;
-
-    if (flat) {
+    const total = chunksRef.current.reduce((acc, cur) => acc + cur.length, 0);
+    if (total > 0) {
+      const flat = new Float32Array(total);
       let offset = 0;
       for (const chunk of chunksRef.current) {
         flat.set(chunk, offset);
         offset += chunk.length;
       }
 
-      const wavBlob = encodeWav(flat, 44100);
+      // IMPORTANT: use the ACTUAL sample rate from the context (iOS may be 48000)
+      const wavBlob = encodeWav(flat, sampleRateRef.current);
       const wavUrl = URL.createObjectURL(wavBlob);
       const filename = `breath_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
 
@@ -221,6 +251,7 @@ const BreathRecordScreen: React.FC = () => {
         state: {
           ...audioData,
           nextPage: "/confirmation",
+          recordingType: "breath" // helps any type-specific handling
         },
       });
     } else {
@@ -234,6 +265,7 @@ const BreathRecordScreen: React.FC = () => {
             audioFileUrl: audioUrl,
             filename: file.name,
             nextPage: "/confirmation",
+            recordingType: "breath"
           },
         });
       }
@@ -251,6 +283,7 @@ const BreathRecordScreen: React.FC = () => {
         audioFileUrl: audioUrl,
         filename: file.name,
         nextPage: "/confirmation",
+        recordingType: "breath"
       },
     });
   };
@@ -363,7 +396,7 @@ const BreathRecordScreen: React.FC = () => {
         {/* Quick Skip for testing */}
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/confirmation" } })}
+          onClick={() => navigate("/upload-complete", { state: { nextPage: "/confirmation", recordingType: "breath" } })}
           style={{ position: "absolute", top: "20px", right: "20px", backgroundColor: "#f0f0f0", border: "1px solid #ccc", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}
         >
           Skip

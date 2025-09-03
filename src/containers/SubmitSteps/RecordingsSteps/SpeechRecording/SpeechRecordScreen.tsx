@@ -127,7 +127,15 @@ const SpeechRecordScreen: React.FC = () => {
   /* ----------------- Start Recording (lossless, like cough) ----------------- */
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          sampleRate: 44100,
+        },
+      });
       const ctx = new AudioContext({ sampleRate: 44100 });
       // iOS Safari: make sure context is running after user gesture
       try { await ctx.resume(); } catch {}
