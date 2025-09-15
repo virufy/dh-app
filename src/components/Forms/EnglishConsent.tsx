@@ -26,8 +26,8 @@ const EnglishConsent: React.FC = () => {
                 Study</u></b></p>
             <p><b>1. Study Title:</b> Smartphone-Based Respiratory Disease Screening via
                 Breathing Sound AI Analysis</p>
-            <p><b>The above-mentioned study has been approved by <mark>the Dubai Scientific
-                Research Ethics Committee, DHA</mark></b></p>
+            <p><b>The above-mentioned study has been approved by the Dubai Scientific
+                Research Ethics Committee, DHA</b></p>
             <p><b>Principal Investigator: Yacine Hadjiat</b></p>
             <p style={{ margin: 0, fontSize: '12px' }}>
                 <b>Address:</b>{' '}
@@ -304,7 +304,7 @@ const EnglishConsent: React.FC = () => {
                 that the obtained information will be kept
                 confidential. Unless required by law, only the study investigator or
                 designee, the MBRU-Institutional Review Board
-                (MBRU-IRB), <mark>the Dubai Scientific Research and Ethics Committee (DSREC) </mark>
+                (MBRU-IRB), the Dubai Scientific Research and Ethics Committee (DSREC)
                 and/or inspectors from governmental agencies
                 will have direct access to your information. If you are harmed by taking
                 part in this research project, there are
