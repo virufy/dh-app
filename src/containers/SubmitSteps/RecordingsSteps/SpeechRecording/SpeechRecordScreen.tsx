@@ -101,6 +101,9 @@ const SpeechRecordScreen: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
+  const storedPatientId = sessionStorage.getItem("patientId") || "unknown";
+
+
   useEffect(() => {
     return () => {
       stopRecording();
@@ -233,7 +236,9 @@ const SpeechRecordScreen: React.FC = () => {
 
       const wavBlob = encodeWav(flat, 44100);
       const wavUrl = URL.createObjectURL(wavBlob);
-      const filename = `speech_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
+      const filename = `${storedPatientId}_speech-${new Date().toISOString().replace(/\.\d+Z$/, "").replace(/:/g, "-")}.wav`;
+
+     
 
       if (recordingTime < 3) {
         setShowTooShortModal(true);
@@ -389,7 +394,7 @@ const SpeechRecordScreen: React.FC = () => {
         {/* Quick Skip for testing */}
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-breath" } })}
+          onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-breath", skipped: true } })}
           style={{
             position: "absolute",
             top: "20px",

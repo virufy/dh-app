@@ -107,6 +107,9 @@ const CoughRecordScreen: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
+  const storedPatientId = sessionStorage.getItem("patientId") || "unknown";
+
+
   useEffect(() => {
     return () => {
       stopRecording();
@@ -206,7 +209,8 @@ const CoughRecordScreen: React.FC = () => {
 
       const wavBlob = encodeWav(flat, 44100);
       const wavUrl = URL.createObjectURL(wavBlob);
-      const filename = `cough_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
+      const filename = `${storedPatientId}_cough-${new Date().toISOString().replace(/\.\d+Z$/, "").replace(/:/g, "-")}.wav`;
+
 
       if (recordingTime < 3) {
         setShowTooShortModal(true);
@@ -334,7 +338,7 @@ const CoughRecordScreen: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-speech" } })}
+          onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-speech", skipped: true } })}
           style={{ position: "absolute", top: "20px", right: "20px", backgroundColor: "#f0f0f0", border: "1px solid #ccc", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}
         >
           Skip

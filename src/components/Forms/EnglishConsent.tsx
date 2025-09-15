@@ -47,8 +47,8 @@ const EnglishConsent: React.FC = () => {
             <p><b>Sites where the study will be conducted: </b> Al Barsha Health Centre, Nadd Al
                 Hammar Health Center</p>
             <p>
-                <b>You are invited to participate in this research study conducted at <mark>Dubai
-                    Health .</mark> Please, take your time to read the
+                <b>You are invited to participate in this research study conducted at Dubai
+                    Health Please, take your time to read the
                     following information carefully, before you decide whether you wish to take part
                     in this research study or not . You
                     are encouraged to ask the study investigator if you need any additional

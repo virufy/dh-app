@@ -34,8 +34,8 @@ const UploadCompleteCough: React.FC = () => {
   const isArabic = i18n.language === "ar";
   const { t } = useTranslation();
 
-  const { audioFileUrl, filename = t("uploadComplete.filename"), nextPage } =
-    (location.state as { audioFileUrl?: string; filename?: string; nextPage?: string }) || {};
+  const { audioFileUrl, filename = t("uploadComplete.filename"), nextPage, skipped } =
+    (location.state as { audioFileUrl?: string; filename?: string; nextPage?: string; skipped?: boolean }) || {};
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -127,21 +127,26 @@ const UploadCompleteCough: React.FC = () => {
 
   const handlePlayPause = async () => {
     const audio = audioRef.current;
-    if (!audio || !audioFileUrl) {
+
+    // If user skipped, don’t show "no audio" error
+    if ((!audio || !audioFileUrl) && !skipped) {
       setErrMsg(
-        t("uploadComplete.noAudio", "No audio attached. Go back and record/upload a file.")
+        t(
+          "uploadComplete.noAudio",
+          "No audio attached. Go back and record/upload a file."
+        )
       );
       return;
     }
+
+    if (!audio || !audioFileUrl) return; // just exit silently if skipped
+
     try {
       if (audio.paused) {
-        // Keep this inside the click handler for iOS gesture requirement
         if (audio.readyState < 2) audio.load();
         await audio.play();
-        // isPlaying flips via 'play' event
       } else {
         audio.pause();
-        // isPlaying flips via 'pause' event
       }
     } catch (e) {
       console.error("Error playing audio:", e);
@@ -149,6 +154,7 @@ const UploadCompleteCough: React.FC = () => {
       setIsPlaying(false);
     }
   };
+
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
@@ -213,11 +219,12 @@ const UploadCompleteCough: React.FC = () => {
           <Title>{t("uploadComplete.subtitle")}</Title>
           <Subtitle>{t("uploadComplete.description")}</Subtitle>
 
-          {!audioFileUrl && (
+          {!audioFileUrl && !skipped && (
             <Subtitle style={{ color: "#b00", fontWeight: 600 }}>
               {t("uploadComplete.noAudio")}
             </Subtitle>
           )}
+
 
           <FileRow>
             <span>{filename}</span>

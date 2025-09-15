@@ -175,7 +175,7 @@ const ConsentScreen: React.FC = () => {
                                     fontSize: baseFontSize,
                                     width: '100%',
                                 }}>
-                                    <u>{t('consent.description')}</u>
+                                    {t('consent.description')}
                                 </p>
 
                                 <div style={{ marginBottom: '1.5rem', fontWeight: 'bold' }}>
@@ -211,8 +211,8 @@ const ConsentScreen: React.FC = () => {
                                     <a
                                         href={
                                             i18n.language === 'ar'
-                                                ? 'https://drive.google.com/file/d/1VvW2WO2hi0K84yqD6ayna9iBeyzm0X5k/view'
-                                                : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/view'
+                                                ? 'https://virufy.org/en/privacy-policy'
+                                                : 'https://virufy.org/en/privacy-policy'
                                         }
                                         target="_blank"
                                         rel="noopener noreferrer"

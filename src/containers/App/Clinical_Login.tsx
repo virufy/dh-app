@@ -37,6 +37,7 @@ const Clinical_Login = () => {
       return;
     }
     setError('');
+    sessionStorage.setItem("patientId", patientId);
     navigate('/consent');
   };
 

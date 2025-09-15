@@ -108,6 +108,9 @@ const BreathRecordScreen: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
+  const storedPatientId = sessionStorage.getItem("patientId") || "unknown";
+
+
   useEffect(() => {
     return () => {
       // cleanup on unmount
@@ -230,7 +233,7 @@ const BreathRecordScreen: React.FC = () => {
       // IMPORTANT: use the ACTUAL sample rate from the context (iOS may be 48000)
       const wavBlob = encodeWav(flat, sampleRateRef.current);
       const wavUrl = URL.createObjectURL(wavBlob);
-      const filename = `breath_recording-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`;
+      const filename = `${storedPatientId}_breath-${new Date().toISOString().replace(/\.\d+Z$/, "").replace(/:/g, "-")}.wav`;
 
       if (recordingTime < 3) {
         setShowTooShortModal(true);
@@ -396,7 +399,7 @@ const BreathRecordScreen: React.FC = () => {
         {/* Quick Skip for testing */}
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/confirmation", recordingType: "breath" } })}
+          onClick={() => navigate("/upload-complete", { state: { nextPage: "/confirmation", skipped: true, recordingType: "breath" } })}
           style={{ position: "absolute", top: "20px", right: "20px", backgroundColor: "#f0f0f0", border: "1px solid #ccc", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}
         >
           Skip
