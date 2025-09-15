@@ -357,7 +357,7 @@ const CoughRecordScreen: React.FC = () => {
           <MinimumDurationModal
             onClose={() => {
               setShowTooShortModal(false);
-              startRecording();
+              
             }}
           />
         )}
