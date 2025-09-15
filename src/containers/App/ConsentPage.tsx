@@ -189,8 +189,9 @@ const ConsentScreen: React.FC = () => {
                                         <a
                                             href={
                                                 i18n.language === 'ar'
-                                                    ? 'https://drive.google.com/file/d/1Ba5ywnq6A1LcJehiOSRAr2f1yRIxKLo4/view'
-                                                    : 'https://drive.google.com/file/d/1FUmtRxEVgQG2kvUK9uv4m3Vl4OF_rslq/view'
+                                                    ? 'https://drive.google.com/file/d/1ZStVIFr7hixosQufTu_ljg2XyuNvmfd_/view'
+                                                    
+                                                    : 'https://drive.google.com/file/d/1vXhM9nFp2TfGdLplxpc4hV9EIuYZBodW/view'
 
                                             }
                                             target="_blank"
