@@ -399,7 +399,7 @@ const BreathRecordScreen: React.FC = () => {
         {/* Quick Skip for testing */}
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/confirmation", skipped: true, recordingType: "breath" } })}
+          onClick={() => navigate("/confirmation")}
           style={{ position: "absolute", top: "20px", right: "20px", backgroundColor: "#f0f0f0", border: "1px solid #ccc", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}
         >
           Skip

@@ -108,11 +108,11 @@ const SpeechRecordScreen: React.FC = () => {
     return () => {
       stopRecording();
       if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current.close().catch(() => { });
       }
       // ensure tracks are stopped if we unmount mid-record
       if (streamRef.current) {
-        try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch {}
+        try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch { }
         streamRef.current = null;
       }
     };
@@ -131,7 +131,7 @@ const SpeechRecordScreen: React.FC = () => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
+        audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
@@ -141,7 +141,7 @@ const SpeechRecordScreen: React.FC = () => {
       });
       const ctx = new AudioContext({ sampleRate: 44100 });
       // iOS Safari: make sure context is running after user gesture
-      try { await ctx.resume(); } catch {}
+      try { await ctx.resume(); } catch { }
 
       const source = ctx.createMediaStreamSource(stream);
       const processor = ctx.createScriptProcessor(4096, 1, 1);
@@ -205,20 +205,20 @@ const SpeechRecordScreen: React.FC = () => {
 
     // remove monitor path
     if (monitorNodeRef.current) {
-      try { monitorNodeRef.current.disconnect(); } catch {}
+      try { monitorNodeRef.current.disconnect(); } catch { }
       monitorNodeRef.current = null;
     }
 
     if (processor) {
-      try { processor.disconnect(); } catch {}
+      try { processor.disconnect(); } catch { }
     }
     if (ctx) {
-      try { ctx.close(); } catch {}
+      try { ctx.close(); } catch { }
     }
 
     // stop the mic tracks cleanly so the OS mic indicator stops
     if (streamRef.current) {
-      try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch {}
+      try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch { }
       streamRef.current = null;
     }
 
@@ -238,7 +238,7 @@ const SpeechRecordScreen: React.FC = () => {
       const wavUrl = URL.createObjectURL(wavBlob);
       const filename = `${storedPatientId}_speech-${new Date().toISOString().replace(/\.\d+Z$/, "").replace(/:/g, "-")}.wav`;
 
-     
+
 
       if (recordingTime < 3) {
         setShowTooShortModal(true);
@@ -394,7 +394,7 @@ const SpeechRecordScreen: React.FC = () => {
         {/* Quick Skip for testing */}
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-breath", skipped: true } })}
+          onClick={() => navigate("/record-breath", { state: { skipped: true } })}
           style={{
             position: "absolute",
             top: "20px",
@@ -403,11 +403,12 @@ const SpeechRecordScreen: React.FC = () => {
             border: "1px solid #ccc",
             padding: "8px 16px",
             borderRadius: "4px",
-            cursor: "pointer",
+            cursor: "pointer"
           }}
         >
           Skip
         </button>
+
 
         <ActionButtons>
           <button onClick={handleContinue}>{t("recordSpeech.continueButton")}</button>
@@ -433,7 +434,7 @@ const SpeechRecordScreen: React.FC = () => {
           <MinimumDurationModal
             onClose={() => {
               setShowTooShortModal(false);
-              
+
             }}
           />
         )}

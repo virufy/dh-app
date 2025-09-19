@@ -114,7 +114,7 @@ const CoughRecordScreen: React.FC = () => {
     return () => {
       stopRecording();
       if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current.close().catch(() => { });
       }
     };
   }, []);
@@ -131,7 +131,7 @@ const CoughRecordScreen: React.FC = () => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
+        audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
@@ -193,7 +193,7 @@ const CoughRecordScreen: React.FC = () => {
       processor.disconnect();
     }
     if (ctx) {
-      ctx.close().catch(() => {});
+      ctx.close().catch(() => { });
     }
 
     const flat = chunksRef.current.length
@@ -338,11 +338,21 @@ const CoughRecordScreen: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => navigate("/upload-complete", { state: { nextPage: "/record-speech", skipped: true } })}
-          style={{ position: "absolute", top: "20px", right: "20px", backgroundColor: "#f0f0f0", border: "1px solid #ccc", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}
+          onClick={() => navigate("/record-speech", { state: { skipped: true } })}
+          style={{
+            position: "absolute",
+            top: "20px",
+            right: "20px",
+            backgroundColor: "#f0f0f0",
+            border: "1px solid #ccc",
+            padding: "8px 16px",
+            borderRadius: "4px",
+            cursor: "pointer"
+          }}
         >
           Skip
         </button>
+
 
         <ActionButtons>
           <button onClick={handleContinue}>{t("recordCough.continueButton")}</button>
@@ -357,7 +367,7 @@ const CoughRecordScreen: React.FC = () => {
           <MinimumDurationModal
             onClose={() => {
               setShowTooShortModal(false);
-              
+
             }}
           />
         )}
