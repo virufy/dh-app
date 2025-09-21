@@ -107,7 +107,7 @@ const CoughRecordScreen: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  const storedPatientId = sessionStorage.getItem("patientId") || "unknown";
+  const storedPatientId = sessionStorage.getItem("CNM_PatientID") || "unknown";
 
 
   useEffect(() => {

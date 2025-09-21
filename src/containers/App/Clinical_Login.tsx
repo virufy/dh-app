@@ -17,6 +17,7 @@ import {
 const Clinical_Login = () => {
   const { t, i18n } = useTranslation();
   const [patientId, setPatientId] = useState('');
+  const [hospital, setHospital] = useState('Al Barsha Health Centre');
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const isArabic = i18n.language === 'ar';
@@ -37,7 +38,14 @@ const Clinical_Login = () => {
       return;
     }
     setError('');
-    sessionStorage.setItem("patientId", patientId);
+    let cnm = '';
+    if (hospital === t('home.hospital_options.barsha')) {
+      cnm = 'BHC';
+    } else if (hospital === t('home.hospital_options.nadd')) {
+      cnm = 'NAH';
+    }
+    const CNM_PatientID = `${cnm}_${patientId}`;
+    sessionStorage.setItem("CNM_PatientID", CNM_PatientID);
     navigate('/consent');
   };
 
@@ -85,9 +93,13 @@ const Clinical_Login = () => {
       )}
 
       <label style={fieldLabel}>{t('home.hospital_label')}</label>
-      <select style={dropdown} defaultValue="Al Barsha Health Centre">
-        <option>{t('home.hospital_options.barsha')}</option>
-        <option>{t('home.hospital_options.nadd')}</option>
+      <select
+        style={dropdown}
+        value={hospital}
+        onChange={e => setHospital(e.target.value)}
+      >
+        <option value={t('home.hospital_options.barsha')}>{t('home.hospital_options.barsha')}</option>
+        <option value={t('home.hospital_options.nadd')}>{t('home.hospital_options.nadd')}</option>
       </select>
 
       <div style={buttonContainer}>
