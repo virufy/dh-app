@@ -14,6 +14,9 @@ import {
   Subtitle,
   FileRow,
   Slider,
+  CheckboxRow,
+  Label,
+  Checkbox,
   TimeRow,
   PlayButton,
   ButtonsWrapper,
@@ -33,10 +36,11 @@ const UploadCompleteCough: React.FC = () => {
   const location = useLocation();
   const isArabic = i18n.language === "ar";
   const { t } = useTranslation();
-
-  const { audioFileUrl, filename = t("uploadComplete.filename"), nextPage, skipped } =
-    (location.state as { audioFileUrl?: string; filename?: string; nextPage?: string; skipped?: boolean }) || {};
-
+  const [involuntary, setInvoluntary] = useState(false);
+  // const { audioFileUrl, filename = t("uploadComplete.filename"), nextPage, skipped } =
+  //   (location.state as { audioFileUrl?: string; filename?: string; nextPage?: string; skipped?: boolean }) || {};
+  const { audioFileUrl, filename = t("uploadComplete.filename"), nextPage, skipped, recordingType } =
+    (location.state as { audioFileUrl?: string; filename?: string; nextPage?: string; skipped?: boolean; recordingType?: string }) || {};
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -51,7 +55,7 @@ const UploadCompleteCough: React.FC = () => {
     // Always reset on URL change
     try {
       audio.pause();
-    } catch {}
+    } catch { }
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -74,13 +78,13 @@ const UploadCompleteCough: React.FC = () => {
         const prev = audio.ontimeupdate;
         try {
           audio.currentTime = 1e101;
-        } catch {}
+        } catch { }
         audio.ontimeupdate = () => {
           audio.ontimeupdate = prev || null;
           setDuration(audio.duration || 0);
           try {
             audio.currentTime = 0;
-          } catch {}
+          } catch { }
         };
       }
       setCurrentTime(audio.currentTime || 0);
@@ -162,7 +166,7 @@ const UploadCompleteCough: React.FC = () => {
     if (audio) {
       try {
         audio.currentTime = newTime;
-      } catch {}
+      } catch { }
       setCurrentTime(newTime);
     }
   };
@@ -227,7 +231,7 @@ const UploadCompleteCough: React.FC = () => {
 
 
           <FileRow>
-  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{filename}</span>
+            <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{filename}</span>
 
             <span
               style={{ fontSize: "20px", cursor: "pointer", alignSelf: "center" }}
@@ -276,6 +280,13 @@ const UploadCompleteCough: React.FC = () => {
 
         <ButtonsWrapper>
           <RetakeButton onClick={handleRetake}>{t("uploadComplete.retake")}</RetakeButton>
+          {/* Show involuntary checkbox only for cough recording */}
+          {recordingType === "cough" && (
+            <CheckboxRow>
+              <Label htmlFor="involuntary" style={{ userSelect: "none" }}>{t("recordCough.checkboxLabel")}</Label>
+              <Checkbox id="involuntary" type="checkbox" checked={involuntary} onChange={() => setInvoluntary(!involuntary)} style={{ cursor: "pointer" }} />
+            </CheckboxRow>
+          )}
           <SubmitButton onClick={handleSubmit}>{t("uploadComplete.submit")}</SubmitButton>
         </ButtonsWrapper>
 

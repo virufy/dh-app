@@ -173,3 +173,67 @@ export const ErrorLink = styled.a`
   color: #3578de;
   text-decoration: underline;
 `;
+// export const CheckboxRow = styled.div`
+//     display: flex;
+//     align-items: center;
+//     justify-content: space-between;
+    
+//     padding: 0.75rem 1rem;
+//     margin: 2rem auto;
+
+//     width: 100%;
+//     max-width: 450px;
+//     box-sizing: border-box;
+// `;
+// export const Checkbox = styled.input.attrs({ type: 'checkbox' })`
+//   width: 24px;
+//   height: 24px;
+//   appearance: none;
+//   -webkit-appearance: none;
+//   background-color: white;
+//   border: 3px solid #c4c4c4;
+//   border-radius: 6px;
+//   cursor: pointer;
+//   display: inline-block;
+//   position: relative;
+
+//   &:checked {
+//     background-color: #007bff;
+//     border-color: #007bff;
+//   }
+
+//   &:checked::after {
+//     content: '';
+//     position: absolute;
+//     left: 6px;
+//     top: 1px;
+//     width: 6px;
+//     height: 12px;
+//     border: solid white;
+//     border-width: 0 2px 2px 0;
+//     transform: rotate(45deg);
+//   }
+// `;
+
+// export const Label = styled.label`
+//     font-size: 1rem;
+//     color: #393939;
+// `;
+export const CheckboxRow = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+`;
+
+export const Label = styled.label`
+  font-size: 1rem;
+  font-weight: 500;
+  margin-right: 0.75rem;
+`;
+
+export const Checkbox = styled.input`
+  width: 20px;
+  height: 20px;
+  accent-color: #3578de;
+  margin-right: 0.5rem;
+`;

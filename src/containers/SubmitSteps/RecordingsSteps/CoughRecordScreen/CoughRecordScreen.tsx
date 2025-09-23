@@ -24,9 +24,9 @@ import {
   ButtonRow,
   CircleButton,
   ButtonLabel,
-  CheckboxRow,
-  Label,
-  Checkbox,
+  // CheckboxRow,
+  // Label,
+  // Checkbox,
   ActionButtons,
   UploadButton,
   UploadText,
@@ -98,7 +98,7 @@ const CoughRecordScreen: React.FC = () => {
   const chunksRef = useRef<Float32Array[]>([]);
 
   const [showTooShortModal, setShowTooShortModal] = useState(false);
-  const [involuntary, setInvoluntary] = useState(false);
+  // const [involuntary, setInvoluntary] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -228,7 +228,7 @@ const CoughRecordScreen: React.FC = () => {
     if (audioData) {
       setError(null);
       navigate("/upload-complete", {
-        state: { ...audioData, nextPage: "/record-speech" },
+        state: { ...audioData, nextPage: "/record-speech", recordingType: "cough" },
       });
     } else {
       const file = fileInputRef.current?.files?.[0];
@@ -237,7 +237,7 @@ const CoughRecordScreen: React.FC = () => {
       } else {
         const audioUrl = URL.createObjectURL(file);
         navigate("/upload-complete", {
-          state: { audioFileUrl: audioUrl, filename: file.name, nextPage: "/record-speech" },
+          state: { audioFileUrl: audioUrl, filename: file.name, nextPage: "/record-speech", recordingType: "cough" },
         });
       }
     }
@@ -250,7 +250,7 @@ const CoughRecordScreen: React.FC = () => {
     if (!file) return;
     const audioUrl = URL.createObjectURL(file);
     navigate("/upload-complete", {
-      state: { audioFileUrl: audioUrl, filename: file.name, nextPage: "/record-speech" },
+      state: { audioFileUrl: audioUrl, filename: file.name, nextPage: "/record-speech", recordingType: "cough" },
     });
   };
 
@@ -329,10 +329,10 @@ const CoughRecordScreen: React.FC = () => {
           </div>
         </ButtonRow>
 
-        <CheckboxRow>
+        {/* <CheckboxRow>
           <Label htmlFor="involuntary" style={{ userSelect: "none" }}>{t("recordCough.checkboxLabel")}</Label>
           <Checkbox id="involuntary" type="checkbox" checked={involuntary} onChange={() => setInvoluntary(!involuntary)} style={{ cursor: "pointer" }} />
-        </CheckboxRow>
+        </CheckboxRow> */}
 
         {error && (<p style={{ color: "red", textAlign: "center", fontWeight: "bold" }}>{error}</p>)}
 
