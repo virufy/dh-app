@@ -430,11 +430,11 @@ const SpeechRecordScreen: React.FC = () => {
           />
         </ActionButtons>
 
-        {showTooShortModal && (
+          {showTooShortModal && (
           <MinimumDurationModal
             onClose={() => {
               setShowTooShortModal(false);
-
+              setRecordingTime(0);
             }}
           />
         )}

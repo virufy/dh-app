@@ -189,150 +189,150 @@ const ConsentScreen: React.FC = () => {
                                         <a
                                             href={
                                                 i18n.language === 'ar'
-                                                    ? 'https://docs.google.com/document/d/19Bh9fvKUxitJNisLe_M-S0qATHEIDqWr/edit'
-                                                    : 'https://docs.google.com/document/d/1SFQKg-7drRktzvTFBaxSFg_TY3QZDQoQ/edit'}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{ color: '#000000', fontWeight: 'normal' }}
-                                        >
-                                            {t('consent.readFull')}
-                                        </a>
-                                        <Spacer height="1rem" />
-
-                                    </div>
-                                    {i18n.language === "ar" ? <ArabicConsent /> : <EnglishConsent />}
-                                    <Spacer height="1rem" />
-
-                                    {t('consent.virufyTitle')}<br />
-                                    <span style={{ fontWeight: 'normal' }}>{t('consent.virufyDesc')}</span> <br />
-                                    <Spacer height="1rem" />
-                                    <a
-                                        href={
-                                            i18n.language === 'ar'
-                                                ? 'https://virufy.org/en/privacy-policy'
-                                                : 'https://virufy.org/en/privacy-policy'
-                                        }
+                                                    ? 'https://drive.google.com/file/d/1YdHC4Wu0zs8dWwBWdYpEyfYTjsJpYOTi/view'
+                                                    : 'https://drive.google.com/file/d/1rXh2N6-EFfsVo_0xeSKXqGRzMTxtw5cE/view'}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         style={{ color: '#000000', fontWeight: 'normal' }}
-                                    >
+                                        >
                                         {t('consent.readFull')}
                                     </a>
-                                    {/*<div style={{...iframeStyle, marginTop: '1rem'}}>*/}
-                                    {/*    <iframe*/}
-                                    {/*        src={i18n.language === 'ar'*/}
-                                    {/*            ? 'https://drive.google.com/file/d/1VvW2WO2hi0K84yqD6ayna9iBeyzm0X5k/preview'*/}
-                                    {/*            : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/preview'*/}
-                                    {/*        }*/}
-                                    {/*        width="100%"*/}
-                                    {/*        height="100%"*/}
-                                    {/*        allow="autoplay"*/}
-                                    {/*        style={{border: 'none'}}*/}
-                                    {/*        title={t('consent.privacy_policy_preview_title')}*/}
-                                    {/*    ></iframe>*/}
-                                    {/*</div>*/}
-
-                                </div>
-
-                                <h4 style={{ marginBottom: '0rem' }}>{t('consent.confirmationTitle')}</h4>
-                                <p style={{
-                                    fontSize: baseFontSize,
-                                    marginTop: '0rem',
-                                    marginBottom: '1rem',
-                                    fontWeight: 400,
-                                    letterSpacing: '0.02em',
-                                    lineHeight: 1.5,
-                                }}>{t('consent.confirmationDesc')}</p>
-
-                                <div style={{ marginBottom: '1.5rem', paddingLeft: 0 }}>
-                                    {checkboxes.map(({ id, label, state, setState }) => (
-                                        <label
-                                            key={id}
-                                            htmlFor={id}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'flex-start',
-                                                gap: '12px',
-                                                marginBottom: '0.75rem',
-                                                paddingLeft: 0
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                id={id}
-                                                checked={state}
-                                                onChange={() => setState(!state)}
-                                                style={{ marginTop: '0.3rem', borderColor: '#222' }}
-                                            />{' '}
-                                            <span>{label}</span>
-                                        </label>
-                                    ))}
-                                </div>
-
-                                <div style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '1rem',
-                                    marginBottom: '1.5rem',
-                                    width: '100%'
-                                }}>
                                     <Spacer height="1rem" />
 
-                                    <button
-                                        onClick={handleNext}
-                                        style={{
-                                            backgroundColor: "#3578de",
-                                            fontSize: baseFontSize,
-                                            color: "white",
-                                            border: "none",
-                                            padding: "1.5rem",
-                                            borderRadius: "15px",
-                                            fontWeight: "bold",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {t('consent.next')}
-                                    </button>
+                                </div>
+                                {i18n.language === "ar" ? <ArabicConsent /> : <EnglishConsent />}
+                                <Spacer height="1rem" />
 
-                                    <button
-                                        onClick={handleSignedPaperNext}
-                                        style={{
-                                            backgroundColor: "#3578de",
-                                            fontSize: baseFontSize,
-                                            color: "white",
-                                            border: "none",
-                                            padding: "1.5rem",
-                                            borderRadius: "15px",
-                                            fontWeight: "bold",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {t('consent.nextPaper')}
-                                    </button>
-                                </div>
-                                <div style={{ textAlign: "center" }}>
-                                    <a
-                                        href="https://docs.google.com/forms/d/e/1FAIpQLSdlBAA3drY6NydPkxKkMWTEZQhE9p5BSH5YSuaK18F_rObBFg/viewform?usp=dialog"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{
-                                            fontSize: baseFontSize,
-                                            fontWeight: "bold",
-                                            color: "#3578de",
-                                            textDecoration: "underline",
-                                        }}
-                                    >
-                                        {t("recordBreath.reportIssue", "Something wrong? Report an error")}
-                                    </a>
-                                </div>
+                                {t('consent.virufyTitle')}<br />
+                                <span style={{ fontWeight: 'normal' }}>{t('consent.virufyDesc')}</span> <br />
+                                <Spacer height="1rem" />
+                                <a
+                                    href={
+                                        i18n.language === 'ar'
+                                            ? 'https://virufy.org/en/privacy-policy'
+                                            : 'https://virufy.org/en/privacy-policy'
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: '#000000', fontWeight: 'normal' }}
+                                >
+                                    {t('consent.readFull')}
+                                </a>
+                                {/*<div style={{...iframeStyle, marginTop: '1rem'}}>*/}
+                                {/*    <iframe*/}
+                                {/*        src={i18n.language === 'ar'*/}
+                                {/*            ? 'https://drive.google.com/file/d/1VvW2WO2hi0K84yqD6ayna9iBeyzm0X5k/preview'*/}
+                                {/*            : 'https://drive.google.com/file/d/1hnxvDJ5qHBnUi7cnkNdyD4PuWMz8Ntss/preview'*/}
+                                {/*        }*/}
+                                {/*        width="100%"*/}
+                                {/*        height="100%"*/}
+                                {/*        allow="autoplay"*/}
+                                {/*        style={{border: 'none'}}*/}
+                                {/*        title={t('consent.privacy_policy_preview_title')}*/}
+                                {/*    ></iframe>*/}
+                                {/*</div>*/}
 
                             </div>
+
+                            <h4 style={{ marginBottom: '0rem' }}>{t('consent.confirmationTitle')}</h4>
+                            <p style={{
+                                fontSize: baseFontSize,
+                                marginTop: '0rem',
+                                marginBottom: '1rem',
+                                fontWeight: 400,
+                                letterSpacing: '0.02em',
+                                lineHeight: 1.5,
+                            }}>{t('consent.confirmationDesc')}</p>
+
+                            <div style={{ marginBottom: '1.5rem', paddingLeft: 0 }}>
+                                {checkboxes.map(({ id, label, state, setState }) => (
+                                    <label
+                                        key={id}
+                                        htmlFor={id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '12px',
+                                            marginBottom: '0.75rem',
+                                            paddingLeft: 0
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            id={id}
+                                            checked={state}
+                                            onChange={() => setState(!state)}
+                                            style={{ marginTop: '0.3rem', borderColor: '#222' }}
+                                        />{' '}
+                                        <span>{label}</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1rem',
+                                marginBottom: '1.5rem',
+                                width: '100%'
+                            }}>
+                                <Spacer height="1rem" />
+
+                                <button
+                                    onClick={handleNext}
+                                    style={{
+                                        backgroundColor: "#3578de",
+                                        fontSize: baseFontSize,
+                                        color: "white",
+                                        border: "none",
+                                        padding: "1.5rem",
+                                        borderRadius: "15px",
+                                        fontWeight: "bold",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {t('consent.next')}
+                                </button>
+
+                                <button
+                                    onClick={handleSignedPaperNext}
+                                    style={{
+                                        backgroundColor: "#3578de",
+                                        fontSize: baseFontSize,
+                                        color: "white",
+                                        border: "none",
+                                        padding: "1.5rem",
+                                        borderRadius: "15px",
+                                        fontWeight: "bold",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {t('consent.nextPaper')}
+                                </button>
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                                <a
+                                    href="https://docs.google.com/forms/d/e/1FAIpQLSdlBAA3drY6NydPkxKkMWTEZQhE9p5BSH5YSuaK18F_rObBFg/viewform?usp=dialog"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        fontSize: baseFontSize,
+                                        fontWeight: "bold",
+                                        color: "#3578de",
+                                        textDecoration: "underline",
+                                    }}
+                                >
+                                    {t("recordBreath.reportIssue", "Something wrong? Report an error")}
+                                </a>
+                            </div>
+
                         </div>
                     </div>
                 </div>
+            </div>
 
-            </ConsentContent>
-        </ConsentContainer>
+        </ConsentContent>
+        </ConsentContainer >
     );
 };
 

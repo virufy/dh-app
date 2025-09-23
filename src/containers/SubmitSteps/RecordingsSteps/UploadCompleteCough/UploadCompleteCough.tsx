@@ -227,7 +227,8 @@ const UploadCompleteCough: React.FC = () => {
 
 
           <FileRow>
-            <span>{filename}</span>
+  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{filename}</span>
+
             <span
               style={{ fontSize: "20px", cursor: "pointer", alignSelf: "center" }}
               onClick={handleBack}

@@ -39,9 +39,9 @@ const Clinical_Login = () => {
     }
     setError('');
     let cnm = '';
-    if (hospital === t('home.hospital_options.barsha')) {
+    if (hospital.includes("برشاء") || hospital.includes("Barsha")) {
       cnm = 'BHC';
-    } else if (hospital === t('home.hospital_options.nadd')) {
+    } else if (hospital.includes("ند الحمر") || hospital.includes("Nadd")) {
       cnm = 'NAH';
     }
     const CNM_PatientID = `${cnm}_${patientId}`;
